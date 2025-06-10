@@ -18,5 +18,5 @@ ssh-keygen -t rsa -b 4096 -C "hh_core" -f id_rsa
 ssh ${REMOTE_SSH} "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
 # cat ${REMOTE_SSH_KEY}.pub | ssh ${REMOTE_SSH} "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
-ssh-copy-id -i  ${REMOTE_SSH_KEY}.pub ${REMOTE_SSH}
+ssh-copy-id ${REMOTE_SSH_ARGS} ${REMOTE_SSH}
 

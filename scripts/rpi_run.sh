@@ -13,5 +13,5 @@ fi
 # ssh ${REMOTE_USER}@${REMOTE_ADDR} "export LD_LIBRARY_PATH=${REMOTE_WORK}/${REMOTE_ARCH}/lib &&
 # ${REMOTE_WORK}/${REMOTE_ARCH}/test/testCore -f ${REMOTE_WORK}/robot.json"
 
-ssh $REMOTE_SSH_KEY ${REMOTE_USER}@${REMOTE_ADDR} 
+ssh ${REMOTE_SSH_ARGS} ${REMOTE_USER}@${REMOTE_ADDR} 
 # ${REMOTE_WORK}/${REMOTE_ARCH}/test/testCore
