@@ -1,0 +1,13 @@
+{
+    "id": 10,
+    "testCANOpenIO": {
+        "iface": "can0",
+        "speed": 1000000
+    },
+    "testEPOS": {
+        "commIO": "CANOpen",
+        "iface": "can0",
+        "NodeID": 5
+    }
+    
+}

@@ -1,0 +1,50 @@
+{
+    "plugins": {
+        "commIO": {
+            "SerialIO": "/home/inception/git/commIO/plugins/commIO/SerialIO.so"
+        },
+        "deviceIO": {
+            "PositionSensor": "/home/inception/git/commIO/plugins/deviceIO/PositionSensor.so"
+        }
+    },
+    "commIO": {
+        "serial0": {
+            "type": "SerialIO",
+            "config": {
+                "iface": "/dev/ttyUSB0",
+                "baudrate": 115200,
+                "timeout_sec": 0,
+                "timeout_usec": 500000,
+                "header": "@",
+                "terminator": "\n",
+                "n_Bytes": 34
+            }
+        }
+    },
+    "deviceIO": {
+        "enc0": {
+            "type": "PositionSensor",
+            "config": {
+                "source": {
+                    "commIO": "serial0",
+                    "lsb_byte": 1,
+                    "n_bytes": 4
+                }
+            }
+        }
+    },
+    "controlIO": {},
+    "robot": {
+        "name": "ExoTAO",
+        "type": "biped",
+        "sensors": [
+            "enc0"
+        ],
+        "actuators": [
+            "motor0"
+        ],
+        "controllers": [
+            "SimplePD"
+        ]
+    }
+}
