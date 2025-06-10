@@ -1,0 +1,9 @@
+[submodule "libs/rapidjson"]
+	path = libs/rapidjson
+	url = https://github.com/Tencent/rapidjson
+[submodule "libs/exprtk"]
+	path = libs/exprtk
+	url = https://github.com/ArashPartow/exprtk
+[submodule "libs/cxxopts"]
+	path = libs/cxxopts
+	url = https://github.com/jarro2783/cxxopts
