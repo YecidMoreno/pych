@@ -21,6 +21,7 @@ public:
     virtual int loop() = 0;
 
     virtual bool command(uint32_t opcode, const void *arg = nullptr) {return true;};
+    virtual bool command(std::string cmd, const void *arg0 = nullptr,  const void *arg1 = nullptr){return false;}
 };
 
 #define CONTROL_IO_INIT_CONFIG(cfg)    \
