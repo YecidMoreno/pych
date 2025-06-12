@@ -13,32 +13,12 @@
 #include <chrono>
 
 #include <core/tasking.h>
+#include "core_defs.h"
 
 namespace HH
 {
     using namespace std::chrono_literals;
     using namespace std::chrono;
-
-
-    struct logger_core_config
-    {
-        bool enable = false;
-        std::string path = "logs";
-    };
-
-    struct core_config
-    {
-        logger_core_config logger;
-    };
-    
-
-    enum class AppState
-    {
-        IDLE,
-        RUNNING,
-        STOPPING,
-        CLOSING
-    };
 
     class __attribute__((visibility("default"))) Core
     {
