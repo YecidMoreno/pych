@@ -50,6 +50,7 @@ namespace jsonapi
         class Impl;
         Impl *impl_;
 
+        int get_bool(const std::string &key, bool *out) const;
         int get_int(const std::string &key, int *out) const;
         int get_uint(const std::string& key, uintptr_t* out) const;
         int get_float(const std::string &key, float *out) const;

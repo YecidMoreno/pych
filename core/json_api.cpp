@@ -185,6 +185,14 @@ namespace jsonapi
         *out = doc[key.c_str()].GetInt();
         return 0;
     }
+    int json_obj::get_bool(const std::string &key, bool *out) const
+    {
+        const auto &doc = impl_->doc;
+        if (!doc.HasMember(key.c_str()) || !doc[key.c_str()].IsBool())
+            return -1;
+        *out = doc[key.c_str()].GetBool();
+        return 0;
+    }
     int json_obj::get_uint(const std::string &key, uintptr_t *out) const
     {
         const auto &doc = impl_->doc;
@@ -305,6 +313,12 @@ namespace jsonapi
     bool json_obj::get<int>(const std::string &key, int *out) const
     {
         return get_int(key, out) == 0;
+    }
+
+    template <>
+    bool json_obj::get<bool>(const std::string &key, bool *out) const
+    {
+        return get_bool(key, out) == 0;
     }
 
     template <>
