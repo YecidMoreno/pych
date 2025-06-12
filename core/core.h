@@ -19,6 +19,18 @@ namespace HH
     using namespace std::chrono_literals;
     using namespace std::chrono;
 
+
+    struct logger_core_config
+    {
+        bool enable = false;
+    };
+
+    struct core_config
+    {
+        logger_core_config logger;
+    };
+    
+
     enum class AppState
     {
         IDLE,
@@ -40,6 +52,8 @@ namespace HH
         Core &operator=(const Core &) = delete;
 
         std::unordered_map<std::string, task_container_t> _tasks_handles;
+
+        core_config _cfg;
 
     public:
         steady_clock::time_point run_time_0;
@@ -63,6 +77,8 @@ namespace HH
 
         std::chrono::nanoseconds get_run_time();
         double get_run_time_double(std::chrono::nanoseconds units = 1s);
+
+        inline const core_config& config() const { return _cfg; }
 
         static Core &instance();
     };
