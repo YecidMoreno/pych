@@ -17,7 +17,7 @@ RUN apk add --no-cache \
     rsync
 
 # Crear punto de trabajo
-WORKDIR /opt/host
+WORKDIR /work
 
 # Por defecto, shell interactivo
 # ENTRYPOINT ["/bin/sh"]
