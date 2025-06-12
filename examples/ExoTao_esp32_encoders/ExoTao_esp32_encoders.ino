@@ -6,6 +6,12 @@
 // #define TO_SERIAL_PLOTTER
 
 
+#ifndef TO_SERIAL_PLOTTER
+  #define WAIT_TIME_US 1000
+#else
+  #define WAIT_TIME_US 100
+#endif
+
 #define N_ABS 2
 gpio_num_t abs_pin_cs[] = {GPIO_NUM_27,GPIO_NUM_15};
 
@@ -46,6 +52,19 @@ void setup() {
 
 void loop() {
 
+  static unsigned long next = micros();
+  unsigned long now = micros();
+
+  if ((long)(now - next) >= 0) {
+    next += WAIT_TIME_US;
+    if((now - next)>200){
+      delayMicroseconds(200);
+    }
+    
+  }else{
+    return;
+  }
+
   for (int i = 0; i < N_ABS; i++) {
     enc_abs[i].read_angle();
     tx_frame.angles[i] = enc_abs[i].getAngle();
@@ -55,7 +74,7 @@ void loop() {
 
 #ifndef TO_SERIAL_PLOTTER
   Serial.write(static_cast<const char *>(angles_ptr), sizeof(tx_frame));
-  delay(1);
+  // delay(1);
 #else
   for (int i = 0; i < 8; i++) {
     Serial.printf("%f\t", tx_frame.angles[i]);
