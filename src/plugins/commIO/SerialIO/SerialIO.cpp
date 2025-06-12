@@ -81,7 +81,7 @@ private:
     struct
     {
         std::string iface;
-        int baudrate = 115200;
+        unsigned long baudrate = 115200;
         unsigned long timeout_sec = 0;
         unsigned long timeout_usec = 500000;
         std::string header = "@";
@@ -205,6 +205,8 @@ public:
             break;
         case 230400:
             baud = B230400;
+        case 1000000:
+            baud = B1000000;
             break;
         default:
             return false; // o manejar error
