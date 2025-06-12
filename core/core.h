@@ -62,6 +62,7 @@ namespace HH
         bool run_for_time(std::chrono::nanoseconds _time);
 
         std::chrono::nanoseconds get_run_time();
+        double get_run_time_double(std::chrono::nanoseconds units = 1s);
 
         static Core &instance();
     };

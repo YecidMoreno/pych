@@ -1,7 +1,7 @@
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RELEASE_DIR}/lib")
 # set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${RELEASE_DIR}/lib")
 
-add_library(reqs SHARED json_api.cpp exprtk_wrapper.cpp)
+add_library(reqs SHARED json_api.cpp exprtk_wrapper.cpp record_variables.cpp)
 
 add_library(core SHARED core.cpp tasking.cpp)
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -38,6 +38,8 @@ Core::Core()
     sa.sa_flags = 0;
 
     sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
+    sigaction(SIGHUP, &sa, nullptr); 
 
     _state = AppState::IDLE;
 };
@@ -253,6 +255,14 @@ std::chrono::nanoseconds Core::get_run_time()
     return steady_clock::now() - this->run_time_0;
 }
 
+double Core::get_run_time_double(std::chrono::nanoseconds units)
+{
+    using namespace std::chrono_literals;
+    using namespace std::chrono;
+    auto elapsed = steady_clock::now() - this->run_time_0;
+    return double(elapsed.count()) / units.count();
+}
+
 bool Core::connect_all_devices()
 {
     _state = AppState::RUNNING;
@@ -301,6 +311,11 @@ bool Core::disconnect_all_devices()
     for (auto &k : this->pm_commIO.getNodes())
     {
         this->pm_commIO.get_node(k)->disconnect();
+    }
+
+    for (auto &k : this->pm_controlIO.getNodes())
+    {
+        this->pm_controlIO.get_node(k)->command("END");
     }
 
     _state = AppState::STOPPING;
