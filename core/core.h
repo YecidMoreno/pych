@@ -23,6 +23,7 @@ namespace HH
     struct logger_core_config
     {
         bool enable = false;
+        std::string path = "logs";
     };
 
     struct core_config
