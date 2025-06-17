@@ -123,3 +123,13 @@ public:
         return keys;
     }
 };
+
+#define __FINISH_PLUGIN_IO                                      \
+    extern "C"                                                  \
+    {                                                           \
+        PLUGIN_IO_TYPE *create() { return new PLUGIN_IO_NAME; } \
+        void destroy(PLUGIN_IO_TYPE *p) { delete p; }           \
+    }
+
+
+    
