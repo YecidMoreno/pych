@@ -245,7 +245,7 @@ bool Core::load_json_project(std::string file_path)
     }
 
     json_obj j_log;
-    if (j.get("log", &j_log))
+    if (j.get("log", &j_log)==0)
     {
         j_log.get("enable",&_cfg.logger.enable);
         j_log.get("path",&_cfg.logger.path);        

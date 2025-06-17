@@ -1,5 +1,5 @@
 #include "exprtk_wrapper.h"
-#include "exprtk.hpp"
+#include <exprtk.hpp>
 
 struct ExprtkParser::Impl {
     exprtk::symbol_table<double> symbol_table;

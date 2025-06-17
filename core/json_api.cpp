@@ -223,6 +223,15 @@ namespace jsonapi
         return 0;
     }
 
+    int json_obj::get_double(const std::string &key, double *out) const
+    {
+        const auto &doc = impl_->doc;
+        if (!doc.HasMember(key.c_str()) || !doc[key.c_str()].IsNumber())
+            return -1;
+        *out = doc[key.c_str()].GetDouble();
+        return 0;
+    }
+
     int json_obj::get_string(const std::string &key, std::string *out) const
     {
         const auto &doc = impl_->doc;
@@ -328,6 +337,12 @@ namespace jsonapi
     }
 
     template <>
+    bool json_obj::get<double>(const std::string &key, double *out) const
+    {
+        return get_double(key, out) == 0;
+    }
+
+    template <>
     bool json_obj::get<std::string>(const std::string &key, std::string *out) const
     {
         return get_string(key, out) == 0;
@@ -386,6 +401,18 @@ namespace jsonapi
             doc.RemoveMember(key.c_str());
         Value val;
         val.SetFloat(value);
+        doc.AddMember(Value(key.c_str(), alloc), val, alloc);
+    }
+
+    template <>
+    void json_obj::set<double>(const std::string &key, const double &value)
+    {
+        auto &alloc = impl_->alloc();
+        auto &doc = impl_->doc;
+        if (doc.HasMember(key.c_str()))
+            doc.RemoveMember(key.c_str());
+        Value val;
+        val.SetDouble(value);
         doc.AddMember(Value(key.c_str(), alloc), val, alloc);
     }
 

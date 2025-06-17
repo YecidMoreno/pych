@@ -6,8 +6,8 @@
 #include <stdexcept>
 
 #include <thread>
-#include <core/logger.h>
-#include <core/json_api.h>
+#include "logger.h"
+#include "json_api.h"
 
 using namespace std::chrono_literals;
 using namespace std::chrono;

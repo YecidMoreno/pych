@@ -54,6 +54,7 @@ namespace jsonapi
         int get_int(const std::string &key, int *out) const;
         int get_uint(const std::string& key, uintptr_t* out) const;
         int get_float(const std::string &key, float *out) const;
+        int get_double(const std::string &key, double *out) const;
         int get_string(const std::string &key, std::string *out) const;
         int get_array(const std::string &key, std::vector<float> *out) const;
         int get_array(const std::string &key, std::vector<std::string> *out) const;

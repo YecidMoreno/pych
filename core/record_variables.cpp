@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <cstdio>
+#include "logger.h"
 
 void RecordVariable::append(double value)
 {
@@ -45,11 +46,15 @@ void RecordVariables::loop()
 
 void RecordVariables::save() const
 {
-    std::printf("Saving log in: %s\n", file_name.c_str());
+
 
     std::ofstream out(file_name);
-    if (!out)
+    if (!out){
+        hh_loge("Saving log in: %s\n", file_name.c_str());
         return;
+    }
+
+    hh_logn("Saving log in: %s\n", file_name.c_str());
 
     for (size_t i = 0; i < vars.size(); ++i)
     {
