@@ -1,8 +1,7 @@
 
-#include "commIO/commIO_interface.h"
+#include <commIO/commIO_interface.h>
 #include "deviceIO/deviceIO_interface.h"
 
-#include "commIO/commIO_interface.h"
 #include "src/plugins/commIO/CANOpenIO/CANOpenIO_defs.h"
 
 #include "core/core.h"
