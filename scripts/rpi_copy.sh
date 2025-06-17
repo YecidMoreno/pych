@@ -17,16 +17,16 @@ send_over_rsync() {
 
     SSH_CMD="ssh -i ${REMOTE_SSH_KEY}"
 
-    rsync -avz -e "${SSH_CMD}" $PARENT_DIR/release/${REMOTE_ARCH} ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK}/ &&
-        rsync -avz -e "${SSH_CMD}" "$PARENT_DIR/robot.json" ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK}/
+    rsync -avz -e "${SSH_CMD}" $PARENT_DIR/release/${REMOTE_ARCH}/ ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK} &&
+        rsync -avz -e "${SSH_CMD}" "$PARENT_DIR/test/robot.json" ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK}/
 
     rsync -avz -e "${SSH_CMD}" $PARENT_DIR/*.sh ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK} &&
         rsync -avz -e "${SSH_CMD}" $PARENT_DIR/scripts ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK}
 }
 
 send_over_sshfs(){
-    rsync -avz  $PARENT_DIR/release/${REMOTE_ARCH} ${REMOTE_LOCAL}/ &&
-        rsync -avz  "$PARENT_DIR/robot.json" ${REMOTE_LOCAL}/
+    rsync -avz  $PARENT_DIR/release/${REMOTE_ARCH}/ ${REMOTE_LOCAL}/ &&
+        rsync -avz  "$PARENT_DIR/test/robot.json" ${REMOTE_LOCAL}/
 
     rsync -avz  $PARENT_DIR/*.sh ${REMOTE_LOCAL} &&
         rsync -avz  $PARENT_DIR/scripts ${REMOTE_LOCAL}

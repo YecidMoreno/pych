@@ -14,20 +14,17 @@ fi
 mount_sshfs() {
     mkdir -p ${HH_CORE_WORK}/remote
 
-    CMD="sshfs -f -o IdentityFile=${REMOTE_SSH_KEY} ${REMOTE_SSH}:${REMOTE_WORK} ${HH_CORE_WORK}/remote"
+    CMD="sshfs -o IdentityFile=${REMOTE_SSH_KEY} ${REMOTE_SSH}:${REMOTE_WORK} ${HH_CORE_WORK}/remote"
     echo $CMD
-    echo "Presiona Ctrl+C para finalizar ..."
-
     bash -c "$CMD"
-    fusermount -u ${HH_CORE_WORK}/remote
 }
 
 if findmnt -rno TARGET "${REMOTE_LOCAL}" >/dev/null; then
     echo "Desmontando carpeta remota"
     fusermount -u ${HH_CORE_WORK}/remote
-    sleep 2
-    mount_sshfs
+    exit -1
 else
     echo "Montando carpeta remota"
     mount_sshfs
+    exit 1 
 fi
