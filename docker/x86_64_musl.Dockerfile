@@ -16,6 +16,9 @@ RUN apk add --no-cache \
     openssh \
     rsync
 
+RUN apk add --no-cache \
+    docker-cli
+
 # Crear punto de trabajo
 WORKDIR /work
 
