@@ -193,7 +193,7 @@ namespace jsonapi
         *out = doc[key.c_str()].GetBool();
         return 0;
     }
-    int json_obj::get_uint(const std::string &key, uintptr_t *out) const
+    int json_obj::get_uint64(const std::string &key, uintptr_t *out) const
     {
         const auto &doc = impl_->doc;
         if (!doc.HasMember(key.c_str()) || !doc[key.c_str()].IsUint64())
@@ -202,10 +202,30 @@ namespace jsonapi
         return 0;
     }
 
+    int json_obj::get_uint32(const std::string &key, uint32_t *out) const
+    {
+        const auto &doc = impl_->doc;
+        if (!doc.HasMember(key.c_str()) || !doc[key.c_str()].IsUint())
+            return -1;
+        *out = static_cast<uintptr_t>(doc[key.c_str()].GetUint());
+        return 0;
+    }
+
     template <>
     bool json_obj::get<uintptr_t>(const std::string &key, uintptr_t *out) const
     {
-        return get_uint(key, out) == 0;
+        return get_uint64(key, out) == 0;
+    }
+
+    template <>
+    bool json_obj::get<uint32_t>(const std::string &key, uint32_t *out) const
+    {
+        return get_uint32(key, out) == 0;
+    }
+
+    bool json_obj::contain(std::string _key){
+        auto items = this->keys();
+        return std::find(items.begin(), items.end(), _key) != items.end();
     }
 
     template <>

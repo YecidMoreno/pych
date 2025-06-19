@@ -42,6 +42,7 @@ namespace jsonapi
 
         std::string get_object_str(const std::string& key, bool pretty = true) const;
 
+        bool contain(std::string _key);
 
         template <typename T>
         void set(const std::string &key, const T &value);
@@ -52,7 +53,8 @@ namespace jsonapi
 
         int get_bool(const std::string &key, bool *out) const;
         int get_int(const std::string &key, int *out) const;
-        int get_uint(const std::string& key, uintptr_t* out) const;
+        int get_uint64(const std::string& key, uintptr_t* out) const;
+        int get_uint32(const std::string& key, uint32_t* out) const;
         int get_float(const std::string &key, float *out) const;
         int get_double(const std::string &key, double *out) const;
         int get_string(const std::string &key, std::string *out) const;
