@@ -1,3 +1,4 @@
+#include <core/logger.h>
 #include <iostream>
 #include <core/core.h>
 
@@ -11,9 +12,8 @@ using namespace std::chrono_literals;
 using namespace std::chrono;
 
 using namespace HH;
-
 #include <cxxopts.hpp>
-
+#include <linux/can.h>
 /*
     auto can0 = core.pm_commIO.get_node("can0");
     auto epos5 = core.pm_deviceIO.get_node("epos5");
@@ -32,7 +32,7 @@ using namespace HH;
 
 */
 
-std::string file_path = "../robot.json";
+std::string file_path = "robot.json";
 
 int main(int argc, char **argv)
 {
@@ -62,7 +62,39 @@ int main(int argc, char **argv)
     core.pm_commIO.printPlugins();
     core.connect_all_devices();
 
-    core.run_for_time(40s);
+    // auto can0 = core.pm_commIO.get_node("can0");
+    // auto enc = core.pm_deviceIO.get_node("enc");
+    // auto mot = core.pm_deviceIO.get_node("mot");
+
+    core.run_tasks();
+
+    auto t0 = steady_clock::now();
+
+    struct can_frame frame;
+    
+    double val;
+    // arg_CANOpen_receive arg_to_read = {.CAN_ID = 0x2901, .lsb_byte = 0, .n_bytes = 4};
+    // can0->receive(&val, 0, static_cast<void *>(&arg_to_read));
+
+    int32_t vel = 70;
+    while (core.get_state() == HH::AppState::RUNNING)
+    {
+        if (steady_clock::now() - t0 > 40s)
+        {
+            break;  
+        }
+
+        // enc->read(&val, 0);
+        // hh_logi("lbs val %f \n", val);
+
+        // mot->write(&vel,4);
+
+        std::this_thread::sleep_for(100ms);
+    }
+
+    core.disconnect_all_devices();
+
+    // core.run_for_time(40s);
 
     return 0;
 }
