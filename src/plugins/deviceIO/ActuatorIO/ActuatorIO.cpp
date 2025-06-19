@@ -13,6 +13,8 @@
 #include "core/core.h"
 #include "core/logger.h"
 
+#include <core/type_utils.h>
+
 using namespace jsonapi;
 
 class ActuatorIO : public DeviceIO_plugin
@@ -25,9 +27,11 @@ class ActuatorIO : public DeviceIO_plugin
     struct
     {
         int nodeID;
+        uint32_t CAN_ID = 0;
         int rpdo;
         int lsb_byte;
         int n_bytes;
+        bool lsb = true;
     } source;
 
     float max_value = 100.0;
@@ -43,34 +47,49 @@ public:
         configured = false;
         _cfg = json_obj::from_string(cfg);
 
-    
-
         if (_cfg.get("source", &_source))
         {
-            if (_source.get("NodeID", &source.nodeID) &
-                _source.get("rpdo", &source.rpdo) &
-                _source.get("lsb_byte", &source.lsb_byte) &
-                _source.get("n_bytes", &source.n_bytes) &
+            if (_source.get("NodeID", &source.nodeID) &&
+                _source.get("rpdo", &source.rpdo) &&
+                _source.get("lsb_byte", &source.lsb_byte) &&
+                _source.get("n_bytes", &source.n_bytes) &&
+                _source.get("commIO", &commIO_str))
+            {
+                configured = true;
+            }
+
+            if (_source.get("CAN_ID", &source.CAN_ID) &&
+                _source.get("lsb_byte", &source.lsb_byte) &&
+                _source.get("n_bytes", &source.n_bytes) &&
                 _source.get("commIO", &commIO_str))
             {
                 configured = true;
             }
         }
 
-     
+        _source.get("lsb", &source.lsb);
 
         if (configured)
         {
-            if (!_cfg.get("max_value", &max_value)){
+            if (!_cfg.get("max_value", &max_value))
+            {
                 configured = false;
             }
-        
-            // struct can_frame frameTx{};
-            frameTx.can_id = ID_RPDO_BASE+source.nodeID + source.rpdo*0x100;
-            frameTx.can_dlc=8;
-            memset(frameTx.data,0,8);
-            // frameTx.can_id = 
-            
+
+            if (source.CAN_ID != 0)
+            {
+                frameTx.can_id = source.CAN_ID | CAN_EFF_FLAG;
+                frameTx.can_dlc = source.n_bytes;
+                memset(frameTx.data, 0, source.n_bytes);
+            }
+            else
+            {
+                // struct can_frame frameTx{};
+                frameTx.can_id = ID_RPDO_BASE + source.nodeID + source.rpdo * 0x100;
+                frameTx.can_dlc = 8;
+                memset(frameTx.data, 0, 8);
+            }
+            // frameTx.can_id =
 
             // arg_to_send = {.NodeID = source.nodeID,
             //                .TPDO_Index = source.tpdo,
@@ -102,13 +121,18 @@ public:
 
     virtual ssize_t write(void *data, size_t size, const void *arg1 = nullptr) override
     {
-        memcpy(&pos_val,data,4);
+        memcpy(&pos_val, data, 4);
 
-        pos_val = pos_val > max_value? max_value : pos_val;
-        pos_val = pos_val < -max_value? -max_value : pos_val;
+        pos_val = pos_val > max_value ? max_value : pos_val;
+        pos_val = pos_val < -max_value ? -max_value : pos_val;
 
-        memcpy(frameTx.data+source.lsb_byte,&pos_val,4);
-        comm->send( static_cast<void * >(&frameTx), 0);
+        if (!source.lsb)
+        {
+            swap_endian_inplace(pos_val);
+        }
+
+        memcpy(frameTx.data + source.lsb_byte, &pos_val, 4);
+        comm->send(static_cast<void *>(&frameTx), 0);
         return -1;
     }
 

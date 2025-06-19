@@ -33,6 +33,7 @@ public:
 
     std::vector<DeviceIO_plugin *> _sensors;
     std::vector<DeviceIO_plugin *> _actuators;
+    std::vector<DeviceIO_plugin *> _references;
 
     virtual ~ControlIO_plugin() = default;
     virtual bool config(const std::string &cfg) = 0;
@@ -70,6 +71,21 @@ public:
         configured = false;                                      \
     }
 
+#define CONTROL_IO_LOAD_REFERENCES_FROM_JSON_                       \
+    std::vector<std::string> _cfg_references;                       \
+    if (configured && _cfg.get("references", &_cfg_references))     \
+    {                                                               \
+        _references.clear();                                        \
+        for (auto &name : _cfg_references)                          \
+        {                                                           \
+            _references.push_back(core.pm_deviceIO.get_node(name)); \
+        }                                                           \
+    }                                                               \
+    else                                                            \
+    {                                                               \
+        configured = false;                                         \
+    }
+
 #define CONTROL_IO_LOAD_ACTUATORS_FROM_JSON_                       \
     std::vector<std::string> _cfg_actuators;                       \
     if (configured && _cfg.get("actuators", &_cfg_actuators))      \
@@ -102,10 +118,11 @@ public:
 #define CONTROL_IO_FINISH_CONFIG \
     return configured;
 
-#define CONTROL_IO_FINISH_CONFIG_FULL     \
-    CONTROL_IO_LOAD_SENSORS_FROM_JSON_;   \
-    CONTROL_IO_LOAD_ACTUATORS_FROM_JSON_; \
-    CONTROL_IO_CONFIGURE_TASK_FROM_JSON_; \
+#define CONTROL_IO_FINISH_CONFIG_FULL      \
+    CONTROL_IO_LOAD_SENSORS_FROM_JSON_;    \
+    CONTROL_IO_LOAD_ACTUATORS_FROM_JSON_;  \
+    CONTROL_IO_LOAD_REFERENCES_FROM_JSON_; \
+    CONTROL_IO_CONFIGURE_TASK_FROM_JSON_;  \
     return configured;
 
 #define CONFIG_VALIDATE(ARG)                                                \
@@ -129,7 +146,7 @@ public:
 #define __CONTROL_IO_END_LOOP() \
     prev_time = now;
 
-#define __CONTROL_IO_GET_DT(DT)            \
-    auto now = core.get_run_time();        \
-    double dt = (now - prev_time).count(); \
+#define __CONTROL_IO_GET_DT(DT)                   \
+    auto now = core.get_run_time();               \
+    double dt = (now - prev_time).count() / 1e9f; \
     dt = (dt > DT) ? dt : DT;

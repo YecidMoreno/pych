@@ -25,12 +25,14 @@
 #include "core/core.h"
 #include "core/logger.h"
 
+#include <unordered_map>
+
 #include <thread>
 using namespace std::chrono_literals;
 
 using namespace jsonapi;
 
-constexpr int NUM_PDO = 4; 
+constexpr int NUM_PDO = 4;
 
 typedef struct
 {
@@ -44,6 +46,17 @@ static NodeDO nodes[MAX_NODES];
 pthread_t rx_thread;
 static std::atomic<bool> tx_running{false};
 
+pthread_mutex_t lock_all_frames;
+std::unordered_map<int32_t, struct can_frame> _all_frames;
+
+void print_can_message(struct can_frame &frame)
+{
+    hh_logi("CAN ID: 0x%X DLC: %d Data: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+            frame.can_id & CAN_EFF_MASK,
+            frame.can_dlc,
+            frame.data[0], frame.data[1], frame.data[2], frame.data[3],
+            frame.data[4], frame.data[5], frame.data[6], frame.data[7]);
+}
 static void *can_receive_thread(void *arg)
 {
     int sock = *(int *)arg;
@@ -54,6 +67,15 @@ static void *can_receive_thread(void *arg)
     {
         if (read(sock, &frame, sizeof(frame)) > 0)
         {
+            uint32_t node_id_32 = frame.can_id & CAN_EFF_MASK;
+
+            if (true)
+            {
+                pthread_mutex_lock(&lock_all_frames);
+                _all_frames[node_id_32] = frame;
+                pthread_mutex_unlock(&lock_all_frames);
+            }
+
             uint8_t node_id = frame.can_id & 0x7F;
             if (node_id >= MAX_NODES)
                 continue;
@@ -170,6 +192,22 @@ public:
     ssize_t receive(void *buffer, size_t, const void *arg) override
     {
         const arg_CANOpen_receive *a = static_cast<const arg_CANOpen_receive *>(arg);
+
+        if (a->CAN_ID != 0U)
+        {
+            if (_all_frames.find(a->CAN_ID) != _all_frames.end())
+            {
+
+                // print_can_message(_all_frames[a->CAN_ID]);
+
+                pthread_mutex_lock(&lock_all_frames);
+                memcpy(buffer, &_all_frames[a->CAN_ID].data + a->lsb_byte, a->n_bytes);
+                pthread_mutex_unlock(&lock_all_frames);
+                return 1;
+            }
+            return 0;
+        }
+
         if (!a || a->NodeID >= MAX_NODES || a->TPDO_Index < 0 || a->TPDO_Index >= NUM_PDO)
             return -1;
 

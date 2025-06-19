@@ -46,8 +46,9 @@ CommandOp parse_command(const std::string &cmd)
 enum class CommIO_type : uint8_t
 {
     _NO_TYPE = 0,
-    _CANOpenIO = 1,
-    _SerialIO = 2
+    _VirtualIO = 1,
+    _CANOpenIO = 2,
+    _SerialIO = 3
 };
 
 class SensorIO : public DeviceIO_plugin
@@ -60,9 +61,10 @@ class SensorIO : public DeviceIO_plugin
     struct
     {
         bool enable = false;
-        std::string to_eval;
+        std::string to_eval = "";
         ExprtkParser parser;
         double x = 0.0;
+        double t = 0.0;
         double y = 0.0;
         double off_y = 0.0;
     } eval;
@@ -70,10 +72,13 @@ class SensorIO : public DeviceIO_plugin
     struct
     {
         CommIO_type comm_type = CommIO_type::_NO_TYPE;
+        uint32_t CAN_ID;
         int nodeID;
         int tpdo;
         int lsb_byte;
-        int n_bytes;
+        int n_bytes = 8;
+        bool is_lbs = true;
+        bool calibrate = true;
         std::string ctype;
         Var_type _type = Var_type::_NO_TYPE;
     } source;
@@ -94,7 +99,6 @@ public:
             if (_source.get("commIO", &commIO_str))
             {
                 std::string type_comm_str = core.pm_commIO.node_type[commIO_str];
-
                 if (type_comm_str.compare("CANOpenIO") == 0)
                 {
                     source.comm_type = CommIO_type::_CANOpenIO;
@@ -102,6 +106,11 @@ public:
                 else if (type_comm_str.compare("SerialIO") == 0)
                 {
                     source.comm_type = CommIO_type::_SerialIO;
+                }
+                else if (commIO_str.compare("VirtualIO") == 0)
+                {
+                    source.comm_type = CommIO_type::_VirtualIO;
+                    source.ctype = "int32";
                 }
             }
         }
@@ -113,19 +122,34 @@ public:
             switch (source.comm_type)
             {
             case CommIO_type::_CANOpenIO:
-                if (_source.get("NodeID", &source.nodeID) &
-                    _source.get("tpdo", &source.tpdo) &
-                    _source.get("lsb_byte", &source.lsb_byte) &
-                    _source.get("ctype", &source.ctype) &
+
+                if (_source.get("NodeID", &source.nodeID) &&
+                    _source.get("tpdo", &source.tpdo) &&
+                    _source.get("lsb_byte", &source.lsb_byte) &&
+                    _source.get("ctype", &source.ctype) &&
                     _source.get("n_bytes", &source.n_bytes))
                 {
-
                     arg_to_read = {.NodeID = source.nodeID,
                                    .TPDO_Index = source.tpdo,
                                    .lsb_byte = source.lsb_byte,
                                    .n_bytes = source.n_bytes};
                     configured = true;
                 }
+                else if (_source.get("CAN_ID", &source.CAN_ID) &&
+                         _source.get("lsb_byte", &source.lsb_byte) &&
+                         _source.get("ctype", &source.ctype) &&
+                         _source.get("n_bytes", &source.n_bytes))
+                {
+                    arg_to_read = {.CAN_ID = source.CAN_ID,
+                                   .lsb_byte = source.lsb_byte,
+                                   .n_bytes = source.n_bytes};
+                    configured = true;
+                }
+                else
+                {
+                    configured = false;
+                }
+
                 break;
             case CommIO_type::_SerialIO:
                 if (_source.get("lsb_byte", &source.lsb_byte) &
@@ -135,25 +159,65 @@ public:
                     configured = true;
                 }
                 break;
+            case CommIO_type::_VirtualIO:
+                if (_cfg.contain("eval"))
+                {
+                    configured = true;
+                }
+                break;
             default:
                 configured = false;
                 break;
             }
         }
+        else
+            return configured;
 
         source._type = parse_var_type(source.ctype);
 
-        if (configured && _cfg.get("eval", &eval.to_eval))
+        std::vector<std::string> eval_arr;
+        if (configured && _cfg.get("eval", &eval_arr))
         {
+            // hh_loge("Es array");
+            eval.to_eval = "";
+            for (size_t i = 0; i < eval_arr.size(); i++)
+            {
+                eval.to_eval += eval_arr[i] + (i + 1 == eval_arr.size() ? "" : " \n ");
+            }
             eval.enable = true;
+        }
+        else
+        {
+            _cfg.get("eval", &eval.to_eval);
+            eval.enable = true;
+            // hh_loge("Es string");
+        }
+
+        if (configured && eval.enable)
+        {
+            // hh_loge("Expression: %s", eval.to_eval.c_str());
+
+            double aux[10];
+            eval.parser.setVariable("aux0", &aux[0]);
+            eval.parser.setVariable("aux1", &aux[1]);
+            eval.parser.setVariable("aux2", &aux[2]);
+            eval.parser.setVariable("aux3", &aux[3]);
+            eval.parser.setVariable("aux4", &aux[4]);
+            eval.parser.setVariable("aux5", &aux[5]);
+
             eval.parser.setVariable("x", &eval.x);
+            eval.parser.setVariable("t", &eval.t);
             eval.parser.setVariable("off_y", &eval.off_y);
             if (!eval.parser.setExpression(eval.to_eval + " - off_y"))
             {
                 hh_loge("Failed to parse expression %s", eval.to_eval.c_str());
+                hh_loge(">> %s", eval.parser.error().c_str());
                 configured = false;
             }
         }
+
+        _source.get("lsb", &source.is_lbs);
+        _source.get("calibrate", &source.calibrate);
 
         return configured;
     }
@@ -165,7 +229,8 @@ public:
 
         auto &core = HH::Core::instance();
 
-        comm = core.pm_commIO.get_node(commIO_str);
+        if (source.comm_type != CommIO_type::_VirtualIO)
+            comm = core.pm_commIO.get_node(commIO_str);
 
         return true;
     }
@@ -181,7 +246,7 @@ public:
 
     virtual ssize_t read(void *buffer, size_t, const void *arg1 = nullptr) override
     {
-        uint8_t tmp_buffer[32] = {0};
+        uint8_t tmp_buffer[source.n_bytes] = {0};
         ssize_t res = 0;
 
         switch (source.comm_type)
@@ -192,10 +257,18 @@ public:
         case CommIO_type::_SerialIO:
             res = comm->receive(tmp_buffer, source.n_bytes, &source.lsb_byte);
             break;
+        case CommIO_type::_VirtualIO:
+            // res = comm->receive(tmp_buffer, source.n_bytes, &source.lsb_byte);
+            break;
 
         default:
             return -1;
             break;
+        }
+
+        if (!source.is_lbs)
+        {
+            std::reverse(tmp_buffer, tmp_buffer + source.n_bytes);
         }
 
         if (!eval.enable)
@@ -206,6 +279,9 @@ public:
 
         if (convert_buffer_to_double(tmp_buffer, eval.x, source._type))
         {
+            static auto &core = HH::Core::instance();
+
+            eval.t = core.get_run_time_double(1s);
             eval.y = eval.parser.evaluate();
             memcpy(buffer, &eval.y, sizeof(eval.y));
         }
@@ -224,6 +300,9 @@ public:
 
     bool sensor_calibrate()
     {
+        if (source.calibrate == false)
+            return true;
+
         double val = 0.0;
         if (eval.enable)
         {
@@ -256,7 +335,15 @@ public:
             return sensor_calibrate();
             break;
         case CommandOp::START:
-            eval.off_y = moving_avg.back();
+            if (source.calibrate == false)
+            {
+                eval.off_y = 0;
+            }
+            else
+            {
+                eval.off_y = moving_avg.back();
+            }
+
             break;
         case CommandOp::INVALID:
         default:

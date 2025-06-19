@@ -16,6 +16,7 @@
 
 
 typedef struct {
+    uint32_t CAN_ID=0;
     int NodeID;
     int TPDO_Index;
     int lsb_byte=0;
