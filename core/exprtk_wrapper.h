@@ -11,6 +11,7 @@ public:
     bool setExpression(const std::string& expr);
     void setVariable(const std::string& name, double* reference);
     double evaluate() const;
+    std::string error();
 
 private:
     struct Impl;

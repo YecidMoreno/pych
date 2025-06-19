@@ -13,6 +13,10 @@ struct ExprtkParser::Impl {
         return parser.compile(expr, expression);
     }
 
+    std::string error(){
+        return parser.error();
+    }
+
     double eval() const {
         return expression.value();
     }
@@ -30,6 +34,10 @@ ExprtkParser::~ExprtkParser() {
 
 bool ExprtkParser::setExpression(const std::string& expr) {
     return impl->compile(expr);
+}
+
+std::string ExprtkParser::error() {
+    return impl->error();
 }
 
 void ExprtkParser::setVariable(const std::string& name, double* reference) {
