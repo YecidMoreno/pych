@@ -1,4 +1,4 @@
-# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RELEASE_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${LIB_DIR}")
 
 
 message("Core includes: ${build_includes}")
@@ -19,8 +19,13 @@ target_include_directories(reqs
 )
 
 
-target_link_libraries(core PUBLIC reqs)
+target_link_libraries(core PUBLIC reqs dl pthread)
+add_library(PYCH::core ALIAS core)
+add_library(PYCH::core_reqs ALIAS reqs)
+
 add_library(HH::core ALIAS core)
+add_library(HH::core_reqs ALIAS reqs)
+
 
 set_target_properties(core PROPERTIES
     CXX_VISIBILITY_PRESET hidden

@@ -1,4 +1,3 @@
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${TEST_DIR}")
 
 add_executable(testCore testCore.cpp) 
