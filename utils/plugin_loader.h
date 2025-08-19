@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <stdexcept>
 #include <core/logger.h>
+#include <filesystem>
 
 template <typename T>
 class PluginManager
@@ -37,10 +38,14 @@ public:
 
         // hh_logi("Cargando plugin '%s' desde: %s", name.c_str(), so_path.c_str());
 
+        if(!std::filesystem::exists(so_path)){
+            return false;
+        }
+
         void *handle = dlopen(so_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
         if (!handle)
         {
-            // hh_loge("Error al cargar %s: %s", so_path.c_str(), dlerror());
+            hh_loge("Error al cargar %s:\n%s", so_path.c_str(), dlerror());
             // throw std::runtime_error("dlopen failed for: " + so_path);
             return false;
         }
@@ -57,7 +62,7 @@ public:
         }
 
         loaded_plugins[name] = PluginEntry{handle, create_fn, destroy_fn};
-        hh_logi("Plugin '%s' registrado exitosamente", name.c_str());
+        // hh_logi("Plugin '%s' registrado exitosamente", name.c_str());
         return true;
     }
 
@@ -88,7 +93,8 @@ public:
         if (it == node_instances.end())
         {
             hh_loge("Nodo '%s' no encontrado", node_id.c_str());
-            throw std::out_of_range("Nodo no encontrado: " + node_id);
+            return nullptr;
+            // throw std::out_of_range("Nodo no encontrado: " + node_id);
         }
         return it->second.get();
     }
@@ -122,6 +128,17 @@ public:
         }
         return keys;
     }
+
+    std::vector<T*> getNodes_T()
+    {
+        std::vector<T*> nodes;
+        nodes.reserve(node_instances.size());
+        for (const auto &pair : node_instances)
+        {
+            nodes.push_back(pair.second.get());
+        }
+        return nodes;
+    }
 };
 
 #define __FINISH_PLUGIN_IO                                      \
@@ -131,5 +148,5 @@ public:
         void destroy(PLUGIN_IO_TYPE *p) { delete p; }           \
     }
 
-
-    
+#define TO_STR(x) _TO_STR(x)
+#define _TO_STR(x) #x

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <optional>
 #include <cstddef>
+#include <math.h>
 
 class VariableTrace
 {
@@ -64,6 +65,7 @@ class LowPassFilter
 {
 public:
     LowPassFilter(double cutoff_freq, double dt = 1e-3) : _dt(dt), cutoff(cutoff_freq), y(0.0), initialized(false) {}
+    LowPassFilter() : _dt(1e-3), cutoff(10), y(0.0), initialized(false) {}
 
     double update(double input, double dt=0)
     {
