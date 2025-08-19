@@ -24,7 +24,6 @@ endif()
 
 message(STATUS "---\nUsing CORE_PATH as: ${CORE_PATH}\n---\n")
 
-
 set(PYCH_RELATIVE_INCLUDE_DIRS
     .
     core
@@ -51,26 +50,27 @@ foreach(inc ${PYCH_RELATIVE_INCLUDE_DIRS})
     list(APPEND PYCH_INSTALL_INCLUDES $<INSTALL_INTERFACE:include/${inc}>)
 endforeach()
 
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(PYCH_INSTALLED_TARGETS)
 message("PYCH_INSTALL_INCLUDES: ${PYCH_INSTALL_INCLUDES}")
 
+# set(RELEASE_DIR "${CMAKE_SOURCE_DIR}/__release/${TARGET_MACHINE}")
+# set(LIB_DIR "${RELEASE_DIR}/lib")
+# set(TEST_DIR "${RELEASE_DIR}/test")
+# set(PLUGIN_DIR "${RELEASE_DIR}/plugins")
+
+# file(MAKE_DIRECTORY "${RELEASE_DIR}")
+# file(MAKE_DIRECTORY "${LIB_DIR}")
+# file(MAKE_DIRECTORY "${PLUGIN_DIR}")
+
+set(PYCH_PLUGINS_TARGET)
+include(cmake/plugins.cmake)
+
 add_subdirectory("core")
-
-set(RELEASE_DIR "${CMAKE_SOURCE_DIR}/release/${TARGET_MACHINE}")
-set(TEST_DIR "${RELEASE_DIR}/test")
-set(PLUGIN_DIR "${RELEASE_DIR}/plugins")
-set(PLUGIN_COMMIO_DIR "${RELEASE_DIR}/plugins/commIO")
-set(PLUGIN_DEVICEIO_DIR "${RELEASE_DIR}/plugins/deviceIO")
-set(PLUGIN_CONTROLIO_DIR "${RELEASE_DIR}/plugins/controlIO")
-
-file(MAKE_DIRECTORY "${RELEASE_DIR}")
-file(MAKE_DIRECTORY "${PLUGIN_DIR}")
-file(MAKE_DIRECTORY "${PLUGIN_COMMIO_DIR}")
-file(MAKE_DIRECTORY "${PLUGIN_DEVICEIO_DIR}")
-file(MAKE_DIRECTORY "${PLUGIN_CONTROLIO_DIR}")
 
 add_subdirectory("${CORE_PATH}/src/plugins/commIO/CANOpenIO")
 add_subdirectory("${CORE_PATH}/src/plugins/commIO/SerialIO")
+
 add_subdirectory("${CORE_PATH}/src/plugins/deviceIO/EPOS")
 add_subdirectory("${CORE_PATH}/src/plugins/deviceIO/SensorIO")
 add_subdirectory("${CORE_PATH}/src/plugins/deviceIO/ActuatorIO")
@@ -79,14 +79,27 @@ add_subdirectory("${CORE_PATH}/src/plugins/controlIO/SimplePD")
 add_subdirectory("${CORE_PATH}/src/plugins/controlIO/SimplePD_1D")
 
 add_subdirectory("${CORE_PATH}/test")
+message( STATUS PYCH_PLUGINS_TARGET: ${PYCH_PLUGINS_TARGET})
+
+
+foreach(target ${PYCH_PLUGINS_TARGET})
+    # set_target_properties(${target} 
+        # PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_DIR}  PREFIX "") 
+endforeach()
 
 
 include(CMakePackageConfigHelpers)
 
-list(APPEND PYCH_INSTALLED_TARGETS core reqs EPOS SensorIO testCore SimplePD SimplePD_1D)
-install(TARGETS ${PYCH_INSTALLED_TARGETS} 
+install(TARGETS core reqs 
     EXPORT pych_coreTargets
     LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+list(APPEND PYCH_INSTALLED_TARGETS EPOS SensorIO SerialIO testCore SimplePD SimplePD_1D)
+install(TARGETS ${PYCH_INSTALLED_TARGETS} 
+    EXPORT pych_coreTargets
+    LIBRARY DESTINATION plugins
     ARCHIVE DESTINATION lib
 )
 
