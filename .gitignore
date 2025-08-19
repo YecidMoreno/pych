@@ -3,3 +3,6 @@
 /build
 /.vscode
 /ssh
+/test_build
+/__release
+/xbuild
