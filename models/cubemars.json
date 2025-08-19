@@ -1,0 +1,125 @@
+{
+    "plugins": {
+        "path": [
+            "/opt/host/plugins/",
+            "../plugins/",
+            "plugins/",
+            "../../plugins/",
+            "/home/inception/git/commIO/release/x86_64/plugins/",
+            "/home/pi/aarch64/plugins/"
+        ],
+        "commIO": {
+            "CANOpenIO": "commIO/CANOpenIO.so"
+        },
+        "deviceIO": {
+            "SensorIO": "deviceIO/SensorIO.so",
+            "ActuatorIO": "deviceIO/ActuatorIO.so"
+        },
+        "controlIO": {
+            "SimplePD_1D": "controlIO/SimplePD_1D.so",
+            "SimplePD": "controlIO/SimplePD.so"
+        }
+    },
+    "commIO": {
+        "can0": {
+            "type": "CANOpenIO",
+            "config": {
+                "iface": "can0",
+                "ts": "1s",
+                "wakeup": "800ns",
+                "thread": "_thr_control0"
+            }
+        }
+    },
+    "deviceIO": {
+        "ref_pos": {
+            "type": "SensorIO",
+            "config": {
+                "source": {
+                    "commIO": "VirtualIO",
+                    "calibrate": false
+                },
+                "eval": [
+                    "aux0 := 2 * M_PI * 1;",
+                    "aux1 := 45*sin(aux0*t - aux0);",
+                    "aux3 := (t>1)? aux1:0;",
+                    "aux3"
+                ]
+            }
+        },
+        "enc": {
+            "type": "SensorIO",
+            "config": {
+                "source": {
+                    "commIO": "can0",
+                    "CAN_ID": 10497,
+                    "lsb_byte": 0,
+                    "n_bytes": 2,
+                    "ctype": "int16",
+                    "lsb": false,
+                    "calibrate": true
+                },
+                "eval": " x * 0.1"
+            }
+        },
+        "mot": {
+            "type": "ActuatorIO",
+            "config": {
+                "source": {
+                    "commIO": "can0",
+                    "CAN_ID": 769,
+                    "lsb_byte": 0,
+                    "n_bytes": 4,
+                    "lsb": false
+                },
+                "max_value": 30000
+            }
+        }
+    },
+    "controlIO": {
+        "ctrl0": {
+            "type": "SimplePD_1D",
+            "config": {
+                "kp": 6,
+                "kd": 0.5,
+                "ki": 0.04,
+                "references": [
+                    "ref_pos"
+                ],
+                "sensors": [
+                    "enc"
+                ],
+                "actuators": [
+                    "mot"
+                ],
+                "ts": "2ms",
+                "wakeup": "0ms",
+                "thread": "_thr_control0",
+                "log": {
+                    "enable": true,
+                    "file_name": "SimplePD_1D_0"
+                }
+            }
+        }
+    },
+    "log": {
+        "enable": false,
+        "path": "logs/"
+    },
+    "robot": {
+        "name": "ExoTAO",
+        "type": "biped",
+        "sensors": [
+            "enc_epos5"
+        ],
+        "actuators": [
+            "motor_epos5"
+        ],
+        "controllers": [
+            "SimplePD"
+        ]
+    },
+    "core": {
+        "max_run_time": "5s"
+    }
+}

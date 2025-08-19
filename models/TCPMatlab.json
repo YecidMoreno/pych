@@ -1,0 +1,84 @@
+{
+    "plugins": {
+        "path": [
+            "./plugins/",
+            "/home/inception/git/pych/release/x86_64-linux-gnu/plugins/",
+            "/home/inception/git/pych_plugins/release/x86_64-linux-gnu/plugins/"
+        ],
+        "commIO": {
+            "SerialIO": "SerialIO.so",
+            "TCPClient": "TCPClient.so"
+        },
+        "deviceIO": {
+            "TCPDecode": "TCPDecode.so",
+            "LogPrint": "LogPrint.so"
+        },
+        "controlIO": {
+            "Functional": "Functional.so"
+        }
+    },
+    "commIO": {
+        "tcp0": {
+            "type": "TCPClient",
+            "config": {
+                "port": 1515,
+                "addr": "localhost",
+                "ack": "Hello\n"
+            }
+        }
+    },
+    "deviceIO": {
+        "tcp_var_0": {
+            "type": "TCPDecode",
+            "config": {
+                "comm": "tcp0",
+                "elements": 2,
+                "header":"@",
+                "end":"#"
+            }
+        },
+        "log0": {
+            "type": "LogPrint",
+            "config": {}
+        }
+    },
+    "controlIO": {
+        "fnc0": {
+            "type": "Functional",
+            "config": {
+                "in": [
+                    "tcp_var_0"
+                ],
+                "out": [
+                    "log0"
+                ],
+                "eval": [
+                    "y0 := x0;"
+                ],
+                "ts": "500ms",
+                "wakeup": "0ms",
+                "thread": "_thr_control0"
+            }
+        }
+    },
+    "log": {
+        "enable": false,
+        "path": "logs/"
+    },
+    "robot": {
+        "name": "ExoTAO",
+        "type": "biped",
+        "sensors": [
+            "enc_epos5"
+        ],
+        "actuators": [
+            "motor_epos5"
+        ],
+        "controllers": [
+            "SimplePD"
+        ]
+    },
+    "core": {
+        "max_run_time": "5s"
+    }
+}

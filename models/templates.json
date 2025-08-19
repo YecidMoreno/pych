@@ -1,0 +1,78 @@
+{
+    {
+        "path": [
+            "",
+            "plugins/",
+            "/opt/host/plugins/",
+            "../plugins/",
+            "plugins/",
+            "../../plugins/",
+            "/home/inception/git/commIO/release/x86_64/plugins/",
+            "/home/pi/aarch64/plugins/",
+            "/home/inception/git/pych/release/x86_64-linux-gnu/plugins/"
+        ],
+        "commIO": {
+            "CANOpenIO": "CANOpenIO.so",
+            "SerialIO": "SerialIO.so",
+            "TCPProtocol": "TCPProtocol.so"
+        },
+        "deviceIO": {
+            "SensorIO": "SensorIO.so",
+            "ActuatorIO": "ActuatorIO.so",
+            "EPOS": "EPOS.so",
+            "ScienceMode3": "/home/inception/git/pych_plugins/ScienceMode3/build/libScienceMode3.so"
+        }
+    },
+    {
+        "commIO": {
+            "tcp0": {
+                "type": "TCPClient",
+                "config": {
+                    "port": 50041,
+                    "addr": "192.168.0.2",
+                    "ack" : ""
+                }
+            }
+        },
+        "deviceIO": {
+            "fes0": {
+                "type": "ScienceMode3",
+                "config": {
+                    "iface": "/dev/ttyUSB1"
+                }
+            },
+            "fes0_r": {
+                "type": "Channel_sm3",
+                "config": {
+                    "device": "fes0",
+                    "channel": 0,
+                    "mA": 10,
+                    "pw": 200,
+                    "Hz": 50,
+                    "ramp": 0,
+                    "max_mA": 10,
+                    "max_pw": 200,
+                    "mode": "mA"
+                }
+            }
+        },
+        "controlIO": {
+            "fnc0": {
+                "type": "Funcional",
+                "config": {
+                    "in": [],
+                    "out": [
+                        "fes0_r"
+                    ],
+                    "eval": [
+                        "y0 := 5*(1+sin(2*M_PI*1*t));",
+                        "y1 := t;"
+                    ],
+                    "ts": "10ms",
+                    "wakeup": "0ms",
+                    "thread": "_thr_control0"
+                }
+            }
+        }
+    }
+}
