@@ -1,3 +1,11 @@
+/*
+
+Add runner class:
+    connect
+    disconnect
+    ...
+
+*/
 #pragma once
 
 #include <utils/plugin_loader.h>
@@ -12,8 +20,11 @@
 #include <functional>
 #include <chrono>
 
-#include <core/tasking.h>
 #include "core_defs.h"
+
+#include <plugin/PluginService.h>
+#include <CoreRunner/CoreRunner.h>
+#include <CoreScheduler/CoreScheduler.h>
 
 namespace HH
 {
@@ -27,41 +38,30 @@ namespace HH
         Core();
         ~Core();
 
-        std::atomic<AppState> _state;
+        static Core *this_instance;
+
+        static std::atomic<AppState> _state;
 
         Core(const Core &) = delete;
         Core &operator=(const Core &) = delete;
 
-        std::unordered_map<std::string, task_container_t> _tasks_handles;
-
         core_config _cfg;
 
     public:
-        steady_clock::time_point run_time_0;
+        AppState get_state();
 
-        AppState  get_state();
-
-        bool connect_all_devices();
-        bool disconnect_all_devices();
-
-        PluginManager<CommIO_plugin> pm_commIO;
-        PluginManager<DeviceIO_plugin> pm_deviceIO;
-        PluginManager<ControlIO_plugin> pm_controlIO;
+        PluginService plugins;
+        CoreRunner runner;
+        CoreScheduler scheduler;
 
         bool load_json_project(std::string file_path);
 
-        bool add_to_task(std::string _task_name, task_struct_t _t);
-        bool run_tasks();
-        bool stop_tasks();
-
-        bool run_for_time(std::chrono::nanoseconds _time);
-
-        std::chrono::nanoseconds get_run_time();
-        double get_run_time_double(std::chrono::nanoseconds units = 1s);
-
-        inline const core_config& config() const { return _cfg; }
+        inline const core_config &config() const { return _cfg; }
 
         static Core &instance();
+        static void destroy();
+        static void request_state(HH::AppState newState);
+        static void request_shutdown();
     };
 
 }

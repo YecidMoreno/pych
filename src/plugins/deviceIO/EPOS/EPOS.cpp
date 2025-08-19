@@ -71,7 +71,8 @@ public:
         auto &core = HH::Core::instance();
         hh_logv("EPOS ptr core: %p", (void *)&core);
 
-        comm = core.pm_commIO.get_node(commIO_str);
+        // comm = core.pm_commIO.get_node(commIO_str);
+        comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
 
         this->command(EPOS_CMD::FAULT_RESET);
         this->command(EPOS_CMD::SET_VELOCITY_MODE);

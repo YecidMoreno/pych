@@ -1,3 +1,6 @@
+#define PLUGIN_IO_NAME CANProtocol
+#define PLUGIN_IO_TYPE CommIO_plugin
+
 #include "plugin_loader.h"
 
 #include "CANOpenIO_defs.h"
@@ -25,6 +28,8 @@
 #include "core/core.h"
 #include "core/logger.h"
 
+#include <core/type_utils.h>
+
 #include <unordered_map>
 
 #include <thread>
@@ -32,22 +37,18 @@ using namespace std::chrono_literals;
 
 using namespace jsonapi;
 
-constexpr int NUM_PDO = 4;
-
-typedef struct
-{
-    pthread_mutex_t lock;
-    std::array<struct can_frame, NUM_PDO> TPDO;
-    std::array<struct can_frame, NUM_PDO> RPDO;
-    std::array<uint64_t, NUM_PDO> TPDO_counter;
-} NodeDO;
-
-static NodeDO nodes[MAX_NODES];
 pthread_t rx_thread;
 static std::atomic<bool> tx_running{false};
 
+struct map_frame
+{
+    can_frame frame = {0};
+    uint64_t w_count = 0;
+    uint64_t r_count = 0;
+};
+
 pthread_mutex_t lock_all_frames;
-std::unordered_map<int32_t, struct can_frame> _all_frames;
+std::unordered_map<int32_t, map_frame> _all_frames;
 
 void print_can_message(struct can_frame &frame)
 {
@@ -72,23 +73,9 @@ static void *can_receive_thread(void *arg)
             if (true)
             {
                 pthread_mutex_lock(&lock_all_frames);
-                _all_frames[node_id_32] = frame;
+                _all_frames[node_id_32].frame = frame;
+                _all_frames[node_id_32].w_count++;
                 pthread_mutex_unlock(&lock_all_frames);
-            }
-
-            uint8_t node_id = frame.can_id & 0x7F;
-            if (node_id >= MAX_NODES)
-                continue;
-
-            NodeDO *m = &nodes[node_id];
-            uint16_t offset = (frame.can_id & 0x780) - ID_TPDO_BASE;
-            int index = offset / 0x100;
-            if (index >= 0 && index < NUM_PDO)
-            {
-                pthread_mutex_lock(&m->lock);
-                memcpy(&m->TPDO[index], &frame, sizeof(frame));
-                ++m->TPDO_counter[index];
-                pthread_mutex_unlock(&m->lock);
             }
         }
     }
@@ -100,10 +87,7 @@ class CANProtocol : public CommIO_plugin
 private:
     json_obj _cfg;
     int sock = -1;
-    bool configured = false;
     std::string iface;
-
-    std::array<std::array<uint64_t, NUM_PDO>, MAX_NODES> last_read_counter{};
 
 public:
     bool config(const std::string &cfg) override
@@ -119,7 +103,7 @@ public:
             _task._callback = [this]()
             { this->send(nullptr, 0, &canopen_cmd_SYNC); };
 
-            configured = core.add_to_task(_task._thread_name, _task);
+            configured = core.scheduler.add_to_task(_task._thread_name, _task);
         }
         else
         {
@@ -163,7 +147,7 @@ public:
         return true;
     }
 
-    ssize_t send(void *data, size_t, const void *arg1) override
+    ssize_t send(void *data, size_t len, const void *arg1) override
     {
         if (arg1)
         {
@@ -182,6 +166,16 @@ public:
                 frame.can_id = ID_SYNC;
                 frame.can_dlc = 0;
             }
+            else if (cmd->type == CANOpenSpecial::RPDO)
+            {
+                frame.can_id = ID_RPDO_BASE + 0x100 * cmd->arg1 + cmd->arg0;
+                frame.can_dlc = len;
+                const uint8_t *ptr = static_cast<const uint8_t *>(data);
+                for (size_t i = 0; i < len && i < 8; i++)
+                {
+                    frame.data[i] = ptr[i];
+                }
+            }
 
             return write(sock, &frame, sizeof(frame));
         }
@@ -193,41 +187,60 @@ public:
     {
         const arg_CANOpen_receive *a = static_cast<const arg_CANOpen_receive *>(arg);
 
-        if (a->CAN_ID != 0U)
+        uint32_t CAN_ID = a->CAN_ID;
+        const int &node = a->NodeID;
+        const int &index = a->TPDO_Index;
+        const int &byte_0 = a->byte_0;
+        const int &n_bytes = a->n_bytes;
+        const bool &is_raw = a->raw;
+
+        if (CAN_ID == 0U)
         {
-            if (_all_frames.find(a->CAN_ID) != _all_frames.end())
+            if (a && node <= MAX_NODES && index >= 0 && index <= MAX_PDO)
             {
-
-                // print_can_message(_all_frames[a->CAN_ID]);
-
-                pthread_mutex_lock(&lock_all_frames);
-                memcpy(buffer, &_all_frames[a->CAN_ID].data + a->lsb_byte, a->n_bytes);
-                pthread_mutex_unlock(&lock_all_frames);
-                return 1;
+                CAN_ID = ID_TPDO_BASE + node + 0x100 * (index);
             }
-            return 0;
+            else
+            {
+                return -1;
+            }
         }
+        ssize_t res = 0;
+        map_frame &mf = _all_frames[CAN_ID];
 
-        if (!a || a->NodeID >= MAX_NODES || a->TPDO_Index < 0 || a->TPDO_Index >= NUM_PDO)
-            return -1;
-
-        int node = a->NodeID;
-        int index = a->TPDO_Index;
-        int lsb_byte = a->lsb_byte;
-        int n_bytes = a->n_bytes;
-
-        bool is_new = false;
-        pthread_mutex_lock(&nodes[node].lock);
-        memcpy(buffer, &nodes[node].TPDO[index].data + lsb_byte, n_bytes);
-
-        is_new = (nodes[node].TPDO_counter[index] != last_read_counter[node][index]);
-        if (is_new)
+        if (CAN_ID != 0U)
         {
-            last_read_counter[node][index] = nodes[node].TPDO_counter[index];
-        }
-        pthread_mutex_unlock(&nodes[node].lock);
+            // if (_all_frames.find(CAN_ID) != _all_frames.end())
+            // {
+            if (!is_raw)
+            {
+                pthread_mutex_lock(&lock_all_frames);
+                memcpy(buffer, &mf.frame.data + byte_0, n_bytes);
 
-        return is_new ? sizeof(struct can_frame) : 0;
+                if (a->reverse)
+                {
+                    reverse_bytes((uint8_t *)buffer, n_bytes);
+                }
+
+                res = mf.r_count == mf.w_count ? 0 : n_bytes;
+                mf.r_count = mf.w_count;
+                pthread_mutex_unlock(&lock_all_frames);
+            }
+            else
+            {
+                pthread_mutex_lock(&lock_all_frames);
+                memcpy(buffer, &mf.frame, sizeof(can_frame));
+                res = mf.r_count == mf.w_count ? 0 : sizeof(can_frame);
+                pthread_mutex_unlock(&lock_all_frames);
+            }
+
+            return res;
+
+            // }
+            // return 0;
+        }
+
+        return -1;
     }
 
     virtual bool command(uint32_t opcode, const void *arg = nullptr)
@@ -245,14 +258,6 @@ public:
 
     CANProtocol()
     {
-        for (int i = 0; i < MAX_NODES; ++i)
-        {
-            for (int j = 0; j < NUM_PDO; ++j)
-            {
-                nodes[i].RPDO[j].can_id = ID_RPDO_BASE + 0x100 * j + i;
-                nodes[i].TPDO[j].can_id = ID_TPDO_BASE + 0x100 * j + i;
-            }
-        }
     }
 
     ~CANProtocol()
@@ -261,7 +266,13 @@ public:
         if (sock >= 0)
             close(sock);
     }
+
+
+    std::string get_type() override
+    {
+        return TO_STR(PLUGIN_IO_NAME);
+    }
+
 };
 
-extern "C" CommIO_plugin *create() { return new CANProtocol; }
-extern "C" void destroy(CommIO_plugin *p) { delete p; }
+__FINISH_PLUGIN_IO;

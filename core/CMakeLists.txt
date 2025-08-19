@@ -1,9 +1,11 @@
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${LIB_DIR}")
-
-
 message("Core includes: ${build_includes}")
 
-add_library(core SHARED core.cpp tasking.cpp)
+add_library(core SHARED CoreScheduler/CoreScheduler.cpp
+    CoreScheduler/tasking.cpp
+    CoreRunner/CoreRunner.cpp
+    plugin/PluginService.cpp
+    core.cpp)
+    
 target_include_directories(core
     PUBLIC
     ${PYCH_BUILD_INCLUDES}

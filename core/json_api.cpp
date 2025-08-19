@@ -6,12 +6,15 @@
 #include <rapidjson/stringbuffer.h>
 #include <fstream>
 #include <sstream>
-#include "tasking.h"
+#include <chrono>
+#include <regex>
 
 __attribute__((visibility("default")))
 std::chrono::nanoseconds
 parse_duration(const std::string &str)
 {
+    using namespace std::chrono_literals;
+
     std::regex re(R"((\d+)(ns|us|ms|s))");
     std::smatch match;
 
@@ -301,6 +304,26 @@ namespace jsonapi
         return 0;
     }
 
+    int json_obj::get_array(const std::string &key, std::vector<double> *out) const
+    {
+        const auto &doc = impl_->doc;
+        if (!doc.HasMember(key.c_str()) || !doc[key.c_str()].IsArray())
+            return -1;
+
+        const auto &arr = doc[key.c_str()].GetArray();
+        out->clear();
+        out->reserve(arr.Size());
+
+        for (const auto &v : arr)
+        {
+            if (!v.IsNumber())
+                return -2;
+            out->emplace_back(v.GetDouble());
+        }
+
+        return 0;
+    }
+
     int json_obj::get_array(const std::string &key, std::vector<std::string> *out) const
     {
         const auto &doc = impl_->doc;
@@ -375,6 +398,12 @@ namespace jsonapi
     }
 
     template <>
+    bool json_obj::get<std::vector<double>>(const std::string &key, std::vector<double> *out) const
+    {
+        return get_array(key, out) == 0;
+    }
+
+    template <>
     bool json_obj::get<std::vector<std::string>>(const std::string &key, std::vector<std::string> *out) const
     {
         return get_array(key, out) == 0;
@@ -401,6 +430,18 @@ namespace jsonapi
             doc.RemoveMember(key.c_str());
         doc.AddMember(Value(key.c_str(), alloc), Value(value), alloc);
     }
+
+    template <>
+    void json_obj::set<uint32_t>(const std::string &key, const uint32_t &value)
+    {
+        auto &alloc = impl_->alloc();
+        auto &doc = impl_->doc;
+        if (doc.HasMember(key.c_str()))
+            doc.RemoveMember(key.c_str());
+        doc.AddMember(Value(key.c_str(), alloc), Value(value), alloc);
+    }
+ 
+    
 
     template <>
     void json_obj::set<uintptr_t>(const std::string &key, const uintptr_t &value)

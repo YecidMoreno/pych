@@ -1,3 +1,5 @@
+// #define CUSTOM_CORE
+
 #include <core/logger.h>
 #include <iostream>
 #include <core/core.h>
@@ -32,6 +34,13 @@ using namespace HH;
 
 */
 
+void finish()
+{
+    auto &core = Core::instance();
+    core.runner.disconnect_all_devices();
+    Core::destroy();
+}
+
 std::string file_path = "robot.json";
 
 int main(int argc, char **argv)
@@ -57,44 +66,54 @@ int main(int argc, char **argv)
 
     if (!core.load_json_project(file_path))
     {
+        finish();
         return -1;
     }
-    core.pm_commIO.printPlugins();
-    core.connect_all_devices();
+
+    hh_logn("!core.runner.connect_all_devices()");
+    if (!core.runner.connect_all_devices())
+    {
+        finish();
+        return -1;
+    };
+
+    hh_logn("core.scheduler.run_for_time(time);");
 
     // auto can0 = core.pm_commIO.get_node("can0");
     // auto enc = core.pm_deviceIO.get_node("enc");
     // auto mot = core.pm_deviceIO.get_node("mot");
 
-    core.run_tasks();
+#ifndef CUSTOM_CORE
+    core.scheduler.run_for_time(120s);
+#endif
+
+#ifdef CUSTOM_CORE
+
+    core.scheduler.run();
 
     auto t0 = steady_clock::now();
 
     struct can_frame frame;
-    
-    double val;
+
     // arg_CANOpen_receive arg_to_read = {.CAN_ID = 0x2901, .lsb_byte = 0, .n_bytes = 4};
     // can0->receive(&val, 0, static_cast<void *>(&arg_to_read));
 
-    int32_t vel = 70;
+    // auto fes0_r = core.pm_deviceIO.get_node("fes0_r");
+
     while (core.get_state() == HH::AppState::RUNNING)
     {
         if (steady_clock::now() - t0 > 40s)
         {
-            break;  
+            break;
         }
 
-        // enc->read(&val, 0);
-        // hh_logi("lbs val %f \n", val);
-
-        // mot->write(&vel,4);
-
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(500ms);
     }
 
-    core.disconnect_all_devices();
+    finish();
 
     // core.run_for_time(40s);
-
+#endif
+    finish();
     return 0;
 }

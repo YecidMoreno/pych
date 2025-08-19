@@ -1,3 +1,6 @@
+#define PLUGIN_IO_NAME ActuatorIO
+#define PLUGIN_IO_TYPE DeviceIO_plugin
+
 #include <iostream>
 #include <string.h>
 
@@ -17,7 +20,7 @@
 
 using namespace jsonapi;
 
-class ActuatorIO : public DeviceIO_plugin
+class PLUGIN_IO_NAME : public PLUGIN_IO_TYPE
 {
     json_obj _source;
     CommIO_plugin *comm = nullptr;
@@ -39,65 +42,61 @@ class ActuatorIO : public DeviceIO_plugin
     int32_t pos_val = 0;
     struct can_frame frameTx{};
 
+    bool CANOpen_cfg, CAN_raw_cfg;
+    
+
 public:
-    virtual ~ActuatorIO() = default;
+    virtual ~PLUGIN_IO_NAME() = default;
 
     virtual bool config(const std::string &cfg) override
     {
         configured = false;
         _cfg = json_obj::from_string(cfg);
 
-        if (_cfg.get("source", &_source))
-        {
-            if (_source.get("NodeID", &source.nodeID) &&
-                _source.get("rpdo", &source.rpdo) &&
-                _source.get("lsb_byte", &source.lsb_byte) &&
-                _source.get("n_bytes", &source.n_bytes) &&
-                _source.get("commIO", &commIO_str))
-            {
-                configured = true;
-            }
+        if (!_cfg.get("source", &_source) || !_source.get("commIO", &commIO_str))
+            return configured;
 
-            if (_source.get("CAN_ID", &source.CAN_ID) &&
-                _source.get("lsb_byte", &source.lsb_byte) &&
-                _source.get("n_bytes", &source.n_bytes) &&
-                _source.get("commIO", &commIO_str))
-            {
-                configured = true;
-            }
+        auto &core = HH::Core::instance();
+        // comm = core.pm_commIO.get_node(commIO_str);
+        comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
+
+        if (comm->get_type().compare("CANProtocol") == 0)
+        {
+            CANOpen_cfg = _source.get("NodeID", &source.nodeID) &&
+                       _source.get("rpdo", &source.rpdo) &&
+                       _source.get("lsb_byte", &source.lsb_byte) &&
+                       _source.get("n_bytes", &source.n_bytes);
+
+            CAN_raw_cfg = _source.get("CAN_ID", &source.CAN_ID) &&
+                       _source.get("lsb_byte", &source.lsb_byte) &&
+                       _source.get("n_bytes", &source.n_bytes);
+
+            configured = CANOpen_cfg || CAN_raw_cfg;
         }
+
+        if (!_cfg.get("max_value", &max_value))
+        {
+            configured = false;
+            hh_loge("The max value is Mandatory");
+        }
+
+        if (!configured)
+            return configured;
 
         _source.get("lsb", &source.lsb);
 
-        if (configured)
+        if (CANOpen_cfg)
         {
-            if (!_cfg.get("max_value", &max_value))
-            {
-                configured = false;
-            }
+            frameTx.can_id = ID_RPDO_BASE + source.nodeID + source.rpdo * 0x100;
+            frameTx.can_dlc = 8;
+            memset(frameTx.data, 0, 8);
+        }
 
-            if (source.CAN_ID != 0)
-            {
-                frameTx.can_id = source.CAN_ID | CAN_EFF_FLAG;
-                frameTx.can_dlc = source.n_bytes;
-                memset(frameTx.data, 0, source.n_bytes);
-            }
-            else
-            {
-                // struct can_frame frameTx{};
-                frameTx.can_id = ID_RPDO_BASE + source.nodeID + source.rpdo * 0x100;
-                frameTx.can_dlc = 8;
-                memset(frameTx.data, 0, 8);
-            }
-            // frameTx.can_id =
-
-            // arg_to_send = {.NodeID = source.nodeID,
-            //                .TPDO_Index = source.tpdo,
-            //                .lsb_byte = source.lsb_byte,
-            //                .n_bytes = source.n_bytes};
-
-            // comm = reinterpret_cast<CommIO_plugin *>(com_aux);
-            // comm->send(nullptr, 0, &canopen_cmd_SYNC);
+        if (CAN_raw_cfg)
+        {
+            frameTx.can_id = source.CAN_ID | CAN_EFF_FLAG;
+            frameTx.can_dlc = source.n_bytes;
+            memset(frameTx.data, 0, source.n_bytes);
         }
 
         return configured;
@@ -110,7 +109,8 @@ public:
 
         auto &core = HH::Core::instance();
 
-        comm = core.pm_commIO.get_node(commIO_str);
+        // comm = core.pm_commIO.get_node(commIO_str);
+        comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
 
         return true;
     }
@@ -128,7 +128,7 @@ public:
 
         if (!source.lsb)
         {
-            swap_endian_inplace(pos_val);
+            reverse_bytes((uint8_t *)&pos_val, sizeof(pos_val));
         }
 
         memcpy(frameTx.data + source.lsb_byte, &pos_val, 4);
@@ -148,5 +148,4 @@ public:
     }
 };
 
-extern "C" DeviceIO_plugin *create() { return new ActuatorIO; }
-extern "C" void destroy(DeviceIO_plugin *p) { delete p; }
+__FINISH_PLUGIN_IO;

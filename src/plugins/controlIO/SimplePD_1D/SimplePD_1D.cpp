@@ -9,7 +9,8 @@
 
 #include <core/core.h>
 #include <core/logger.h>
-#include <core/tasking.h>
+#include <core/CoreScheduler/tasking.h>
+
 
 #include <utils/utils_control.h>
 
@@ -83,7 +84,7 @@ public:
         // Do not modify — handles timing and required imports
         __CONTROL_IO_BEGIN_LOOP();
 
-        t_s = core.get_run_time_double(1s);
+        t_s = core.runner.get_run_time_double(1s);
 
         // Read sensors
         _references[0]->read(&pos_d, 4);

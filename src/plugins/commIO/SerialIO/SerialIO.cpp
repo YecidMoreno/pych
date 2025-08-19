@@ -1,3 +1,6 @@
+#define PLUGIN_IO_NAME SerialProtocol
+#define PLUGIN_IO_TYPE CommIO_plugin
+
 #include "plugin_loader.h"
 
 #include "SerialIO_defs.h"
@@ -29,7 +32,7 @@ using namespace jsonapi;
 #include <cstring>
 #include <string>
 
-#define MAX_SERIAL_BUFFER 128
+#define MAX_SERIAL_BUFFER 1024
 
 pthread_t rx_thread;
 static std::atomic<bool> tx_running{false};
@@ -68,7 +71,7 @@ inline int available(int _fd)
     return nBytes;
 }
 
-class SerialProtocol : public CommIO_plugin
+class PLUGIN_IO_NAME : public PLUGIN_IO_TYPE
 {
 private:
     json_obj _cfg;
@@ -276,7 +279,11 @@ public:
         // if (sock >= 0)
         //     close(sock);
     }
+
+    std::string get_type() override
+    {
+        return TO_STR(PLUGIN_IO_NAME);
+    }
 };
 
-extern "C" CommIO_plugin *create() { return new SerialProtocol; }
-extern "C" void destroy(CommIO_plugin *p) { delete p; }
+__FINISH_PLUGIN_IO;

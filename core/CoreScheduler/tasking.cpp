@@ -6,7 +6,7 @@
 
 #include <thread>
 
-#include <core/tasking.h>
+#include "tasking.h"
 #include <core/logger.h>
 #include <core/core.h>
 #include <core/json_api.h>
@@ -39,7 +39,7 @@ void _taks_main_h(std::vector<task_struct_t> &h_tasks)
 
     auto &core = HH::Core::instance();
     // auto now = steady_clock::now();
-    auto now = core.run_time_0;
+    auto now = core.runner.get_run_time_0();
 
     auto t0 = steady_clock::now();
     auto t1 = steady_clock::now();

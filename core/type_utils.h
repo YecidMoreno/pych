@@ -90,3 +90,16 @@ void swap_endian_inplace(T &val)
     auto ptr = reinterpret_cast<uint8_t *>(&val);
     std::reverse(ptr, ptr + sizeof(T));
 }
+
+inline void reverse_bytes(uint8_t* ptr, size_t len)
+{
+    size_t i = 0, j = len - 1;
+    while (i < j)
+    {
+        uint8_t tmp = ptr[i];
+        ptr[i] = ptr[j];
+        ptr[j] = tmp;
+        i++;
+        j--;
+    }
+}

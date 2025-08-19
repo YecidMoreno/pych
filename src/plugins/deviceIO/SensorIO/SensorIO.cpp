@@ -18,6 +18,8 @@
 #include <core/exprtk_wrapper.h>
 #include <core/type_utils.h>
 
+#include <utils/eval_struct.h>
+
 using namespace jsonapi;
 
 enum class CommandOp : uint8_t
@@ -58,16 +60,7 @@ class SensorIO : public DeviceIO_plugin
 
     arg_CANOpen_receive arg_to_read;
 
-    struct
-    {
-        bool enable = false;
-        std::string to_eval = "";
-        ExprtkParser parser;
-        double x = 0.0;
-        double t = 0.0;
-        double y = 0.0;
-        double off_y = 0.0;
-    } eval;
+    eval_t eval;
 
     struct
     {
@@ -77,7 +70,7 @@ class SensorIO : public DeviceIO_plugin
         int tpdo;
         int lsb_byte;
         int n_bytes = 8;
-        bool is_lbs = true;
+        bool reverse = true;
         bool calibrate = true;
         std::string ctype;
         Var_type _type = Var_type::_NO_TYPE;
@@ -94,27 +87,39 @@ public:
         auto &core = HH::Core::instance();
         json_obj _source;
 
-        if (_cfg.get("source", &_source))
+        if (!_cfg.get("source", &_source) || !_source.get("commIO", &commIO_str))
+            return configured;
+
+        if (commIO_str != "VirtualIO"){
+            // comm = core.pm_commIO.get_node(commIO_str);
+            comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
+        }
+            
+
+        const std::string &type = comm->get_type();
+
+        if (type == "CANProtocol")
         {
-            if (_source.get("commIO", &commIO_str))
-            {
-                std::string type_comm_str = core.pm_commIO.node_type[commIO_str];
-                if (type_comm_str.compare("CANOpenIO") == 0)
-                {
-                    source.comm_type = CommIO_type::_CANOpenIO;
-                }
-                else if (type_comm_str.compare("SerialIO") == 0)
-                {
-                    source.comm_type = CommIO_type::_SerialIO;
-                }
-                else if (commIO_str.compare("VirtualIO") == 0)
-                {
-                    source.comm_type = CommIO_type::_VirtualIO;
-                    source.ctype = "int32";
-                }
-            }
+            source.comm_type = CommIO_type::_CANOpenIO;
+            configured = true;
+        }
+        else if (type == "SerialProtocol")
+        {
+            source.comm_type = CommIO_type::_SerialIO;
+            configured = true;
+        }
+        else if (commIO_str == "VirtualIO")
+        {
+            source.comm_type = CommIO_type::_VirtualIO;
+            source.ctype = "int32";
+            configured = true;
         }
         else
+        {
+            configured = false;
+        }
+
+        if (!configured)
             return configured;
 
         if (source.comm_type != CommIO_type::_NO_TYPE)
@@ -131,7 +136,7 @@ public:
                 {
                     arg_to_read = {.NodeID = source.nodeID,
                                    .TPDO_Index = source.tpdo,
-                                   .lsb_byte = source.lsb_byte,
+                                   .byte_0 = source.lsb_byte,
                                    .n_bytes = source.n_bytes};
                     configured = true;
                 }
@@ -141,7 +146,7 @@ public:
                          _source.get("n_bytes", &source.n_bytes))
                 {
                     arg_to_read = {.CAN_ID = source.CAN_ID,
-                                   .lsb_byte = source.lsb_byte,
+                                   .byte_0 = source.lsb_byte,
                                    .n_bytes = source.n_bytes};
                     configured = true;
                 }
@@ -175,48 +180,9 @@ public:
 
         source._type = parse_var_type(source.ctype);
 
-        std::vector<std::string> eval_arr;
-        if (configured && _cfg.get("eval", &eval_arr))
-        {
-            // hh_loge("Es array");
-            eval.to_eval = "";
-            for (size_t i = 0; i < eval_arr.size(); i++)
-            {
-                eval.to_eval += eval_arr[i] + (i + 1 == eval_arr.size() ? "" : " \n ");
-            }
-            eval.enable = true;
-        }
-        else
-        {
-            _cfg.get("eval", &eval.to_eval);
-            eval.enable = true;
-            // hh_loge("Es string");
-        }
+        configured = configured && get_eval_from_json(_cfg, "eval", eval);
 
-        if (configured && eval.enable)
-        {
-            // hh_loge("Expression: %s", eval.to_eval.c_str());
-
-            double aux[10];
-            eval.parser.setVariable("aux0", &aux[0]);
-            eval.parser.setVariable("aux1", &aux[1]);
-            eval.parser.setVariable("aux2", &aux[2]);
-            eval.parser.setVariable("aux3", &aux[3]);
-            eval.parser.setVariable("aux4", &aux[4]);
-            eval.parser.setVariable("aux5", &aux[5]);
-
-            eval.parser.setVariable("x", &eval.x);
-            eval.parser.setVariable("t", &eval.t);
-            eval.parser.setVariable("off_y", &eval.off_y);
-            if (!eval.parser.setExpression(eval.to_eval + " - off_y"))
-            {
-                hh_loge("Failed to parse expression %s", eval.to_eval.c_str());
-                hh_loge(">> %s", eval.parser.error().c_str());
-                configured = false;
-            }
-        }
-
-        _source.get("lsb", &source.is_lbs);
+        _source.get("reverse", &source.reverse);
         _source.get("calibrate", &source.calibrate);
 
         return configured;
@@ -229,8 +195,10 @@ public:
 
         auto &core = HH::Core::instance();
 
-        if (source.comm_type != CommIO_type::_VirtualIO)
-            comm = core.pm_commIO.get_node(commIO_str);
+        if (source.comm_type != CommIO_type::_VirtualIO){
+            comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
+            // comm = core.pm_commIO.get_node(commIO_str);
+        }
 
         return true;
     }
@@ -266,7 +234,7 @@ public:
             break;
         }
 
-        if (!source.is_lbs)
+        if (!source.reverse)
         {
             std::reverse(tmp_buffer, tmp_buffer + source.n_bytes);
         }
@@ -281,7 +249,7 @@ public:
         {
             static auto &core = HH::Core::instance();
 
-            eval.t = core.get_run_time_double(1s);
+            eval.t = core.runner.get_run_time_double(1s);
             eval.y = eval.parser.evaluate();
             memcpy(buffer, &eval.y, sizeof(eval.y));
         }

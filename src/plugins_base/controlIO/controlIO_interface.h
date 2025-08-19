@@ -6,6 +6,7 @@
 #include <core/core_defs.h>
 #include <core/record_variables.h>
 #include <core/json_api.h>
+#include <core/logger.h>
 #include "deviceIO/deviceIO_interface.h"
 
 // Interfaz base que todos los plugins deben implementar
@@ -40,8 +41,16 @@ public:
 
     virtual int loop() = 0;
 
-    virtual bool command(uint32_t opcode, const void *arg = nullptr) { return true; };
-    virtual bool command(std::string cmd, const void *arg0 = nullptr, const void *arg1 = nullptr) { return false; }
+    virtual bool command(uint32_t opcode, const void *arg = nullptr)
+    {
+        hh_logw("DeviceIO_plugin: Command(opcode) not defined, continuing with out errors. ");
+        return true;
+    };
+    virtual bool command(std::string cmd, const void *arg0 = nullptr, const void *arg1 = nullptr)
+    {
+        hh_logw("DeviceIO_plugin: Command(opcode) not defined, continuing with out errors. ");
+        return true;
+    }
 };
 
 #define CONTROL_IO_INIT_CONFIG(cfg)                 \
@@ -56,63 +65,63 @@ public:
         j_log.get("file_name", &_logger.file_name); \
     }
 
-#define CONTROL_IO_LOAD_SENSORS_FROM_JSON_                       \
-    std::vector<std::string> _cfg_sensors;                       \
-    if (configured && _cfg.get("sensors", &_cfg_sensors))        \
-    {                                                            \
-        _sensors.clear();                                        \
-        for (auto &name : _cfg_sensors)                          \
-        {                                                        \
-            _sensors.push_back(core.pm_deviceIO.get_node(name)); \
-        }                                                        \
-    }                                                            \
-    else                                                         \
-    {                                                            \
-        configured = false;                                      \
+#define CONTROL_IO_LOAD_SENSORS_FROM_JSON_                                    \
+    std::vector<std::string> _cfg_sensors;                                    \
+    if (configured && _cfg.get("sensors", &_cfg_sensors))                     \
+    {                                                                         \
+        _sensors.clear();                                                     \
+        for (auto &name : _cfg_sensors)                                       \
+        {                                                                     \
+            _sensors.push_back(core.plugins.get_node<DeviceIO_plugin>(name)); \
+        }                                                                     \
+    }                                                                         \
+    else                                                                      \
+    {                                                                         \
+        configured = false;                                                   \
     }
 
-#define CONTROL_IO_LOAD_REFERENCES_FROM_JSON_                       \
-    std::vector<std::string> _cfg_references;                       \
-    if (configured && _cfg.get("references", &_cfg_references))     \
-    {                                                               \
-        _references.clear();                                        \
-        for (auto &name : _cfg_references)                          \
-        {                                                           \
-            _references.push_back(core.pm_deviceIO.get_node(name)); \
-        }                                                           \
-    }                                                               \
-    else                                                            \
-    {                                                               \
-        configured = false;                                         \
+#define CONTROL_IO_LOAD_REFERENCES_FROM_JSON_                                    \
+    std::vector<std::string> _cfg_references;                                    \
+    if (configured && _cfg.get("references", &_cfg_references))                  \
+    {                                                                            \
+        _references.clear();                                                     \
+        for (auto &name : _cfg_references)                                       \
+        {                                                                        \
+            _references.push_back(core.plugins.get_node<DeviceIO_plugin>(name)); \
+        }                                                                        \
+    }                                                                            \
+    else                                                                         \
+    {                                                                            \
+        configured = false;                                                      \
     }
 
-#define CONTROL_IO_LOAD_ACTUATORS_FROM_JSON_                       \
-    std::vector<std::string> _cfg_actuators;                       \
-    if (configured && _cfg.get("actuators", &_cfg_actuators))      \
-    {                                                              \
-        _actuators.clear();                                        \
-                                                                   \
-        for (auto &name : _cfg_actuators)                          \
-        {                                                          \
-            _actuators.push_back(core.pm_deviceIO.get_node(name)); \
-        }                                                          \
-    }                                                              \
-    else                                                           \
-    {                                                              \
-        configured = false;                                        \
+#define CONTROL_IO_LOAD_ACTUATORS_FROM_JSON_                                    \
+    std::vector<std::string> _cfg_actuators;                                    \
+    if (configured && _cfg.get("actuators", &_cfg_actuators))                   \
+    {                                                                           \
+        _actuators.clear();                                                     \
+                                                                                \
+        for (auto &name : _cfg_actuators)                                       \
+        {                                                                       \
+            _actuators.push_back(core.plugins.get_node<DeviceIO_plugin>(name)); \
+        }                                                                       \
+    }                                                                           \
+    else                                                                        \
+    {                                                                           \
+        configured = false;                                                     \
     }
 
-#define CONTROL_IO_CONFIGURE_TASK_FROM_JSON_                      \
-    task_struct_t _task;                                          \
-    if (configured && load_task_from_json(cfg, _task))            \
-    {                                                             \
-        _task._callback = [this]()                                \
-        { this->loop(); };                                        \
-        configured = core.add_to_task(_task._thread_name, _task); \
-    }                                                             \
-    else                                                          \
-    {                                                             \
-        configured = false;                                       \
+#define CONTROL_IO_CONFIGURE_TASK_FROM_JSON_                                \
+    task_struct_t _task;                                                    \
+    if (configured && load_task_from_json(cfg, _task))                      \
+    {                                                                       \
+        _task._callback = [this]()                                          \
+        { this->loop(); };                                                  \
+        configured = core.scheduler.add_to_task(_task._thread_name, _task); \
+    }                                                                       \
+    else                                                                    \
+    {                                                                       \
+        configured = false;                                                 \
     }
 
 #define CONTROL_IO_FINISH_CONFIG \
@@ -141,12 +150,12 @@ public:
 #define __CONTROL_IO_BEGIN_LOOP()             \
     static auto &core = HH::Core::instance(); \
     using namespace std::chrono_literals;     \
-    static auto prev_time = core.get_run_time();
+    static auto prev_time = core.runner.get_run_time();
 
 #define __CONTROL_IO_END_LOOP() \
     prev_time = now;
 
 #define __CONTROL_IO_GET_DT(DT)                   \
-    auto now = core.get_run_time();               \
+    auto now = core.runner.get_run_time();        \
     double dt = (now - prev_time).count() / 1e9f; \
     dt = (dt > DT) ? dt : DT;
