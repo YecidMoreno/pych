@@ -96,7 +96,7 @@ install(TARGETS core reqs
     ARCHIVE DESTINATION lib
 )
 
-list(APPEND PYCH_INSTALLED_TARGETS EPOS SensorIO SerialIO testCore SimplePD SimplePD_1D)
+list(APPEND PYCH_INSTALLED_TARGETS CANOpenIO EPOS SensorIO SerialIO ActuatorIO testCore SimplePD SimplePD_1D)
 install(TARGETS ${PYCH_INSTALLED_TARGETS} 
     EXPORT pych_coreTargets
     LIBRARY DESTINATION plugins
