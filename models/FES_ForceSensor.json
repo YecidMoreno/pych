@@ -1,0 +1,123 @@
+{
+    "plugins": {
+        "path": [
+            "./plugins/",
+            "/home/inception/git/pych/release/x86_64-linux-gnu/plugins/",
+            "/home/inception/git/pych_plugins/release/x86_64-linux-gnu/plugins/"
+        ],
+        "commIO": {
+            "SerialIO": "SerialIO.so"
+        },
+        "deviceIO": {
+            "ScienceMode3": "ScienceMode3.so",
+            "Channel_sm3": "Channel_sm3.so",
+            "SensorIO": "SensorIO.so"
+        },
+        "controlIO": {
+            "Functional": "Functional.so"
+        }
+    },
+    "commIO": {
+        "serial0": {
+            "type": "SerialIO",
+            "config": {
+                "iface": "/dev/ttyUSB1",
+                "baudrate": 115200,
+                "timeout_sec": 0,
+                "timeout_usec": 5000,
+                "header": "@",
+                "terminator": "\n",
+                "n_Bytes": 14
+            }
+        }
+    },
+    "deviceIO": {
+        "fes0": {
+            "type": "ScienceMode3",
+            "config": {
+                "iface": "/dev/ttyUSB0"
+            }
+        },
+        "fes0_r": {
+            "type": "Channel_sm3",
+            "config": {
+                "device": "fes0",
+                "channel": 0,
+                "mA": 2,
+                "pw": 250,
+                "Hz": 60,
+                "ramp": 0,
+                "max_mA": 40,
+                "max_pw": 300,
+                "mode": "mA"
+            }
+        },
+        "esp32_fsr0": {
+            "type": "SensorIO",
+            "config": {
+                "source": {
+                    "commIO": "serial0",
+                    "lsb_byte": 1,
+                    "n_bytes": 4,
+                    "ctype": "float",
+                    "calibrate": false
+                },
+                "eval": "x*1.0"
+            }
+        }
+    },
+    "controlIO": {
+        "fnc0": {
+            "type": "Functional",
+            "config": {
+                "in": [
+                    "esp32_fsr0"
+                ],
+                "out": [
+                    "fes0_r"
+                ],
+               "eval": [
+    "aux0 := 30;",
+    "aux1 := 2;",
+    "aux3 := (t%aux0 < 0.5*aux0)?1:0;",
+    "aux4 := (t%aux1 < 0.2*aux1)?1:0;",
+    "aux5 := 2*(1+sin(2*M_PI*.5*t));",
+    "aux5 := aux3>0?aux3:aux4;",
+    "y0 := 40*aux5;",
+    "y1 := t;"
+],
+                "ts": "5ms",
+                "wakeup": "0ms",
+                "thread": "_thr_control0",
+                "log": true,
+                "filename": "fes_force_sensor_t3"
+            }
+        }
+    },
+    "log": {
+        "enable": false,
+        "path": "logs/"
+    },
+    "robot": { "eval": [
+    "aux0 := 2.0;",
+    "aux1 := (t%aux0 < 0.5*aux0)?1:0;",
+    "aux2 := aux1 * round(t/2);",
+    "y0 := aux2;",
+    "y1 := t;"
+],
+        "name": "ExoTAO",
+        "type": "biped",
+        "sensors": [
+            "enc_epos5"
+        ],
+        "actuators": [
+            "motor_epos5"
+        ],
+        "controllers": [
+            "SimplePD"
+        ]
+    },
+    "core": {
+        "max_run_time": "5s"
+    }
+}

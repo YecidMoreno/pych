@@ -3,7 +3,7 @@
 source ./activate.sh
 
 EXEC="."
-FILE="models/ScienceMode3.json"
+FILE="models/ExoTaov1.json"
 
 export LD_LIBRARY_PATH="$EXEC/lib"
 

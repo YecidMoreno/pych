@@ -1,0 +1,20 @@
+"eval": [
+    "aux0 := 2.0;",
+    "aux1 := (t%aux0 < 0.5*aux0)?1:0;",
+    "aux2 := aux1 * round(t/2);",
+    "y0 := aux2;",
+    "y1 := t;"
+],
+
+// aux0 -> duração do teste (segundos)
+// aux1 -> pulso quadrado de recuperação
+"eval": [
+    "aux0 := 30;",
+    "aux1 := 2;",
+    "aux3 := (t%aux0 < 0.5*aux0)?1:0;",
+    "aux4 := (t%aux1 < 0.2*aux1)?1:0;",
+    "aux5 := 2*(1+sin(2*M_PI*.5*t));",
+    "aux5 := aux3>0?aux3:aux4;",
+    "y0 := 2*aux5;",
+    "y1 := t;"
+],
