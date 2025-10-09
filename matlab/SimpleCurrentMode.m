@@ -2,7 +2,7 @@ clc
 % close all
 clearvars 
 fileName = "/home/inception/git/pych/release/x86_64-linux-gnu/logs/SimplePD_1D_0.log";
-fileName = "../remote/logs/SimpleImpedance_0.log";
+fileName = "../remote/logs/SimpleCurrentMode_0.log";
 D = readtable(fileName);
 fieldnames(D)
 % D.time = D.time/1000;
@@ -20,12 +20,7 @@ plot(D.time,D.dtheta_out,"DisplayName","\theta_out")
 legend
 
 subplot(313);hold on;
-plot(D.time,D.f,"DisplayName","Force")
-plot(D.time,D.fd,"DisplayName","Force_d")
-legend
-
-figure 
-plot(D.time,D.vel*100,"DisplayName","vel")
+plot(D.time,D.u,"DisplayName","u")
 legend
 
 % figure
