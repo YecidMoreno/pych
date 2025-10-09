@@ -23,6 +23,7 @@ class EPOS : public DeviceIO_plugin
 
     int NodeID = 0;
     std::string commIO_str;
+    std::string mode = "velocity";
 
 public:
     virtual ~EPOS() = default;
@@ -44,6 +45,15 @@ public:
         }
         else
         {
+        }
+
+        if (_cfg.get("mode", &mode))
+        {
+            if (mode != "velocity" && mode != "current")
+            {
+                hh_logw("EPOS mode not recognized, defaulting to velocity");
+                mode = "velocity";
+            }
         }
 
         if (configured)
@@ -75,7 +85,21 @@ public:
         comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
 
         this->command(EPOS_CMD::FAULT_RESET);
-        this->command(EPOS_CMD::SET_VELOCITY_MODE);
+
+        if (mode == "velocity")
+        {
+            this->command(EPOS_CMD::SET_VELOCITY_MODE);
+
+        }
+        else if (mode == "current")
+        {
+            this->command(EPOS_CMD::SET_CURRENT_MODE);
+        }
+        else
+        {
+            hh_logw("EPOS mode not recognized, defaulting to velocity");
+        }
+
         this->command(EPOS_CMD::ENABLE_MOTORS);
 
         comm->send(nullptr, 0, &canopen_cmd_SYNC);
@@ -141,6 +165,23 @@ public:
         comm->send(static_cast<void *>(&frame), sizeof(frame));
     }
 
+    void send_CURRENT_MODE()
+    {
+        struct can_frame frame;
+        frame.data[0] = B1_PAYLOAD;
+
+        frame.can_id = ID_SDO + NodeID;
+        frame.can_dlc = 8;
+
+        frame.data[0] = B4_PAYLOAD; // WRITE 2 bytes
+        frame.data[1] = 0x60;       // Index 0x6060 LSB
+        frame.data[2] = 0x60;       // Index 0x6060 MSB
+        frame.data[3] = 0x00;       // Subindex 0x00
+
+        frame.data[4] = -3;
+        comm->send(static_cast<void *>(&frame), sizeof(frame));
+    }
+
     void send_ENABLE_MOTOR()
     {
         struct can_frame frame;
@@ -189,14 +230,22 @@ public:
         {
         case EPOS_CMD::FAULT_RESET:
             send_FAULT_RESET();
+            send_FAULT_RESET();
             return true;
             break;
 
         case EPOS_CMD::SET_VELOCITY_MODE:
             send_VELOCITY_MODE();
+            send_VELOCITY_MODE();
+            return true;
+            break;
+        case EPOS_CMD::SET_CURRENT_MODE:
+            send_CURRENT_MODE();
+            send_CURRENT_MODE();
             return true;
             break;
         case EPOS_CMD::ENABLE_MOTORS:
+            send_ENABLE_MOTOR();
             send_ENABLE_MOTOR();
             return true;
             break;

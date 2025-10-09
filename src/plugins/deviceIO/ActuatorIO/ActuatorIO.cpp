@@ -35,6 +35,7 @@ class PLUGIN_IO_NAME : public PLUGIN_IO_TYPE
         int lsb_byte;
         int n_bytes;
         bool lsb = true;
+        int dlc = 8;
     } source;
 
     float max_value = 100.0;
@@ -43,7 +44,6 @@ class PLUGIN_IO_NAME : public PLUGIN_IO_TYPE
     struct can_frame frameTx{};
 
     bool CANOpen_cfg, CAN_raw_cfg;
-    
 
 public:
     virtual ~PLUGIN_IO_NAME() = default;
@@ -63,13 +63,15 @@ public:
         if (comm->get_type().compare("CANProtocol") == 0)
         {
             CANOpen_cfg = _source.get("NodeID", &source.nodeID) &&
-                       _source.get("rpdo", &source.rpdo) &&
-                       _source.get("lsb_byte", &source.lsb_byte) &&
-                       _source.get("n_bytes", &source.n_bytes);
+                          _source.get("rpdo", &source.rpdo) &&
+                          _source.get("lsb_byte", &source.lsb_byte) &&
+                          _source.get("n_bytes", &source.n_bytes) &&
+                          _source.get("dlc", &source.dlc);
 
             CAN_raw_cfg = _source.get("CAN_ID", &source.CAN_ID) &&
-                       _source.get("lsb_byte", &source.lsb_byte) &&
-                       _source.get("n_bytes", &source.n_bytes);
+                          _source.get("lsb_byte", &source.lsb_byte) &&
+                          _source.get("n_bytes", &source.n_bytes) &&
+                          _source.get("dlc", &source.dlc);
 
             configured = CANOpen_cfg || CAN_raw_cfg;
         }
@@ -88,15 +90,15 @@ public:
         if (CANOpen_cfg)
         {
             frameTx.can_id = ID_RPDO_BASE + source.nodeID + source.rpdo * 0x100;
-            frameTx.can_dlc = 8;
+            frameTx.can_dlc = source.dlc;
             memset(frameTx.data, 0, 8);
         }
 
         if (CAN_raw_cfg)
         {
             frameTx.can_id = source.CAN_ID | CAN_EFF_FLAG;
-            frameTx.can_dlc = source.n_bytes;
-            memset(frameTx.data, 0, source.n_bytes);
+            frameTx.can_dlc = source.dlc;
+            memset(frameTx.data, 0, source.dlc);
         }
 
         return configured;
@@ -121,17 +123,30 @@ public:
 
     virtual ssize_t write(void *data, size_t size, const void *arg1 = nullptr) override
     {
-        memcpy(&pos_val, data, 4);
+        if (source.n_bytes == 2)
+        {
+            int16_t tmp16;
+            memcpy(&tmp16, data, 2);
+            pos_val = tmp16; // aquí ocurre la extensión de signo a 32 bits
+        }
+        else if (source.n_bytes == 4)
+        {
+            int32_t tmp32;
+            memcpy(&tmp32, data, 4);
+            pos_val = tmp32;
+        }
+
+        // memcpy(&pos_val, data, source.n_bytes);
 
         pos_val = pos_val > max_value ? max_value : pos_val;
         pos_val = pos_val < -max_value ? -max_value : pos_val;
 
         if (!source.lsb)
         {
-            reverse_bytes((uint8_t *)&pos_val, sizeof(pos_val));
+            reverse_bytes((uint8_t *)&pos_val, source.n_bytes);
         }
 
-        memcpy(frameTx.data + source.lsb_byte, &pos_val, 4);
+        memcpy(frameTx.data + source.lsb_byte, &pos_val, source.n_bytes);
         comm->send(static_cast<void *>(&frameTx), 0);
         return -1;
     }
