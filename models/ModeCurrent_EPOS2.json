@@ -19,7 +19,8 @@
             "EPOS": "EPOS.so"
         },
         "controlIO": {
-            "SimpleImpedance": "SimpleImpedance.so"
+            "SimpleImpedance": "SimpleImpedance.so",
+            "SimpleCurrentMode": "SimpleCurrentMode.so"
         }
     },
     "commIO": {
@@ -82,20 +83,6 @@
                 "eval": "x * 180.0 / M_PI"
             }
         },
-        "motor_epos5": {
-            "type": "ActuatorIO",
-            "config": {
-                "source": {
-                    "commIO": "can0",
-                    "NodeID": 5,
-                    "rpdo": 1,
-                    "lsb_byte": 0,
-                    "n_bytes": 4,
-                    "dlc": 4
-                },
-                "max_value": 3000
-            }
-        },
         "motor_epos5_mA": {
             "type": "ActuatorIO",
             "config": {
@@ -113,12 +100,11 @@
     },
     "controlIO": {
         "ctrl0": {
-            "type": "SimpleImpedance",
+            "type": "SimpleCurrentMode",
             "config": {
                 "kp": 200,
                 "kd": 0,
                 "ki": 3,
-                "kv": -2,
                 "sensors": [
                     "enc_epos5",
                     "enc_esp32_1"
@@ -132,7 +118,7 @@
                 "thread": "_thr_control0",
                 "log": {
                     "enable": true,
-                    "file_name": "SimpleImpedance_0"
+                    "file_name": "SimpleCurrentMode_0"
                 }
             }
         }

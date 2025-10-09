@@ -53,7 +53,7 @@
                     "commIO": "can0",
                     "NodeID": 5
                 },
-                "mode": "current"
+                "mode": "velocity"
             }
         },
         "enc_epos5": {
@@ -82,7 +82,7 @@
                 "eval": "x * 180.0 / M_PI"
             }
         },
-        "motor_epos5": {
+        "motor_epos5_rpm": {
             "type": "ActuatorIO",
             "config": {
                 "source": {
@@ -94,20 +94,6 @@
                     "dlc": 4
                 },
                 "max_value": 3000
-            }
-        },
-        "motor_epos5_mA": {
-            "type": "ActuatorIO",
-            "config": {
-                "source": {
-                    "commIO": "can0",
-                    "NodeID": 5,
-                    "rpdo": 3,
-                    "lsb_byte": 0,
-                    "n_bytes": 2,
-                    "dlc": 2
-                },
-                "max_value": 2000
             }
         }
     },
@@ -124,7 +110,7 @@
                     "enc_esp32_1"
                 ],
                 "actuators": [
-                    "motor_epos5_mA"
+                    "motor_epos5_rpm"
                 ],
                 "references":[],
                 "ts": "1ms",
