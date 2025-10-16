@@ -33,7 +33,6 @@ PARENT_DIR=${PYCH_CORE_WORK}
 SEND_FILES="$PARENT_DIR/release/${REMOTE_ARCH}/bin \
     $PARENT_DIR/release/${REMOTE_ARCH}/lib \
     $PARENT_DIR/release/${REMOTE_ARCH}/plugins \
-    $PARENT_DIR/*.sh \
     $PARENT_DIR/scripts \
     /tmp/pych_tmp/"
 
