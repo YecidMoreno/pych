@@ -74,7 +74,7 @@ mount_sshfs() {
 
         mkdir -p ${REMOTE_LOCAL}
 
-        CMD="sshfs -o IdentityFile=${REMOTE_SSH_KEY} ${REMOTE_SSH}:${REMOTE_WORK} ${REMOTE_LOCAL}"
+        CMD="sshfs -o IdentityFile=${REMOTE_SSH_KEY} -o ConnectTimeout=5 ${REMOTE_SSH}:${REMOTE_WORK} ${REMOTE_LOCAL}"
         echo $CMD
         bash -c "$CMD"
     fi
