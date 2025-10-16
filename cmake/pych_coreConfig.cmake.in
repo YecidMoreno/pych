@@ -1,3 +1,4 @@
 @PACKAGE_INIT@
 
 include("${CMAKE_CURRENT_LIST_DIR}/pych_coreTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/plugins.cmake")

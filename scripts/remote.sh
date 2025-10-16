@@ -1,27 +1,45 @@
 #!/bin/bash
 
 if [ -n "$PYCH_CORE_ACTIVATED" ] &&
+    [ -n "$ACTIVATE_SH" ] &&
     [ -n "$REMOTE_ADDR" ] &&
     [ -n "$REMOTE_USER" ] &&
     [ -n "$REMOTE_WORK" ] &&
     [ -n "$REMOTE_ARCH" ]; then
     echo "Sending to: ${REMOTE_USER}@${REMOTE_ADDR}:${REMOTE_WORK}"
 else
-    echo "exit 0"
-    exit 0
+    echo "exit 1: Please, activate pych first."
+    exit 1
 fi
+
+
+
+prepare_files() {
+    # if [ -d /tmp/pych_tmp ]; then
+    #     rm /tmp/pych_tmp -rf
+    # fi
+    
+    mkdir -p /tmp/pych_tmp
+    mkdir -p /tmp/pych_tmp/models
+
+    # cp $PROJECT_PATH/$ACTIVATE_SH /tmp/pych_tmp/activate.sh
+    # cp -r $PROJECT_PATH /tmp/pych_tmp/models
+
+    rsync -avz "$PROJECT_PATH/$ACTIVATE_SH" /tmp/pych_tmp/activate.sh
+    rsync -avz "$PROJECT_PATH" /tmp/pych_tmp/models
+}
 
 PARENT_DIR=${PYCH_CORE_WORK}
 SEND_FILES="$PARENT_DIR/release/${REMOTE_ARCH}/bin \
     $PARENT_DIR/release/${REMOTE_ARCH}/lib \
     $PARENT_DIR/release/${REMOTE_ARCH}/plugins \
-    $PARENT_DIR/models \
     $PARENT_DIR/*.sh \
     $PARENT_DIR/scripts \
-    /home/inception/git/pych_plugins/release/${REMOTE_ARCH}/plugins"
+    /tmp/pych_tmp/"
 
 remote_build() {
     pych-xbuild $REMOTE_ARCH
+    exit $?
 }
 
 send_over_rsync() {
@@ -39,6 +57,7 @@ send_over_sshfs() {
 }
 
 remote_copy() {
+    prepare_files
     if findmnt -rno TARGET "${REMOTE_LOCAL}" >/dev/null; then
         echo "La carpeta '$REMOTE_LOCAL' está montada: using send_over_sshfs"
         send_over_sshfs
@@ -53,9 +72,9 @@ mount_sshfs() {
     if ! findmnt -rno TARGET "${REMOTE_LOCAL}" >/dev/null; then
         echo "Montando carpeta remota"
 
-        mkdir -p ${PYCH_CORE_WORK}/remote
+        mkdir -p ${REMOTE_LOCAL}
 
-        CMD="sshfs -o IdentityFile=${REMOTE_SSH_KEY} ${REMOTE_SSH}:${REMOTE_WORK} ${PYCH_CORE_WORK}/remote"
+        CMD="sshfs -o IdentityFile=${REMOTE_SSH_KEY} ${REMOTE_SSH}:${REMOTE_WORK} ${REMOTE_LOCAL}"
         echo $CMD
         bash -c "$CMD"
     fi
@@ -64,7 +83,7 @@ mount_sshfs() {
 umount_sshfs() {
     if findmnt -rno TARGET "${REMOTE_LOCAL}" >/dev/null; then
         echo "Desmontando carpeta remota"
-        fusermount -u ${PYCH_CORE_WORK}/remote
+        fusermount -u ${REMOTE_LOCAL}
     fi
 }
 
@@ -75,6 +94,26 @@ remote_mount() {
         mount_sshfs
     fi
 
+}
+
+is_mounted() {
+    if findmnt -rno TARGET "${REMOTE_LOCAL}" >/dev/null; then
+        echo "0"
+        exit 0
+    else
+        echo "1"
+        exit 1
+    fi
+}
+
+cmd_stop() {
+    $REMOTE_TTY "pkill -f ${REMOTE_PYCH_BIN}"
+    exit $?
+}
+
+cmd_run() {
+    $REMOTE_TTY "cd ${REMOTE_WORK} && source ./activate.sh && bin/${REMOTE_PYCH_BIN} -f models/${PROJECT_NAME}/${MODEL_NAME}"
+    exit $?
 }
 
 POSITIONAL=()
@@ -100,6 +139,20 @@ while (($# > 0)); do
         remote_mount
         shift
         ;;
+    ismnt)
+        is_mounted
+        shift
+        ;;
+
+    stop)
+        cmd_stop
+        shift
+        ;;
+
+    start | run)
+        cmd_run
+        shift
+        ;;
 
     all)
         remote_build &&
@@ -111,7 +164,7 @@ while (($# > 0)); do
 
     tty)
         echo "$REMOTE_TTY"
-        
+
         $REMOTE_TTY
         shift
         ;;

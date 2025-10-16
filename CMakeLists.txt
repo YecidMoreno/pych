@@ -138,7 +138,11 @@ configure_package_config_file(
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/pych_coreConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/pych_coreConfigVersion.cmake"
+    "${CMAKE_SOURCE_DIR}/cmake/plugins.cmake"
     DESTINATION lib/cmake/pych_core
 )
 
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/cmake/external_build"
+    DESTINATION lib/cmake/pych_core
+)
 
