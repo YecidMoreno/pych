@@ -1,4 +1,4 @@
-// #define CUSTOM_CORE
+#define CUSTOM_CORE
 
 #include <core/logger.h>
 #include <iostream>

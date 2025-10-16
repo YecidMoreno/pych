@@ -205,6 +205,7 @@ public:
                 return -1;
             }
         }
+
         ssize_t res = 0;
         map_frame &mf = _all_frames[CAN_ID];
 
@@ -215,7 +216,15 @@ public:
             if (!is_raw)
             {
                 pthread_mutex_lock(&lock_all_frames);
-                memcpy(buffer, &mf.frame.data + byte_0, n_bytes);
+                memcpy(buffer, &mf.frame.data[0] + byte_0, n_bytes);
+
+                // if (n_bytes == 2)
+                // {
+                //     uint16_t tmp16;
+                //     memcpy(&tmp16, buffer, 2);
+                //     hh_logi("CAN ID: 0x%X Node: %d TPDO: %d Value: %d hex: 0x%04X ", CAN_ID, node, index, tmp16, tmp16);
+                //     hh_logi("mf.frame.data: %02X %02X %02X %02X %02X %02X %02X %02X", mf.frame.data[0], mf.frame.data[1], mf.frame.data[2], mf.frame.data[3], mf.frame.data[4], mf.frame.data[5], mf.frame.data[6], mf.frame.data[7]);
+                // }
 
                 if (a->reverse)
                 {
@@ -267,12 +276,10 @@ public:
             close(sock);
     }
 
-
     std::string get_type() override
     {
         return TO_STR(PLUGIN_IO_NAME);
     }
-
 };
 
 __FINISH_PLUGIN_IO;

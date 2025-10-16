@@ -65,7 +65,7 @@ class SensorIO : public DeviceIO_plugin
     struct
     {
         CommIO_type comm_type = CommIO_type::_NO_TYPE;
-        uint32_t CAN_ID;
+        uint32_t CAN_ID = 0U;
         int nodeID;
         int tpdo;
         int lsb_byte;
@@ -259,6 +259,7 @@ public:
         }
 
         // hh_logi("tmp_buffer ptr: %p",(void *)&tmp_buffer[0]);
+        // hh_logi("tmp_buffer: %02x %02x %02x %02x %02x %02x %02x %02x", tmp_buffer[0], tmp_buffer[1], tmp_buffer[2], tmp_buffer[3], tmp_buffer[4], tmp_buffer[5], tmp_buffer[6], tmp_buffer[7]);
         // hh_logn("eval: %s = %f   x: %f", eval.to_eval.c_str(), eval.y, eval.x);
 
         return res;
