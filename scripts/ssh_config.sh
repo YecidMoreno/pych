@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -n "$HH_CORE_ACTIVATED" ] &&
+if [ -n "$PYCH_CORE_ACTIVATED" ] &&
     [ -n "$REMOTE_ADDR" ] &&
     [ -n "$REMOTE_USER" ] &&
     [ -n "$REMOTE_WORK" ] &&
@@ -10,8 +10,8 @@ else
     exit -1
 fi
 
-mkdir -p  "${HH_CORE_WORK}/ssh"
-cd ${HH_CORE_WORK}/ssh
+mkdir -p  "${PYCH_CORE_WORK}/ssh"
+cd ${PYCH_CORE_WORK}/ssh
 
 ssh-keygen -t rsa -b 4096 -C "hh_core" -f id_rsa
 
