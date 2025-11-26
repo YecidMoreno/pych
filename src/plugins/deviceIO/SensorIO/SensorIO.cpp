@@ -81,22 +81,32 @@ public:
 
     virtual bool config(const std::string &cfg) override
     {
+
         configured = false;
         _cfg = json_obj::from_string(cfg);
 
         auto &core = HH::Core::instance();
         json_obj _source;
-
-        if (!_cfg.get("source", &_source) || !_source.get("commIO", &commIO_str))
+        
+        if (!_cfg.get("source", &_source) || !_source.get("commIO", &commIO_str)){
+            hh_loge("SensorIO: Error reading source.commIO from json");
             return configured;
-
-        if (commIO_str != "VirtualIO")
-        {
-            // comm = core.pm_commIO.get_node(commIO_str);
-            comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
         }
 
-        const std::string &type = comm->get_type();
+        std::string type = "";
+        if (commIO_str.compare("VirtualIO") != 0)
+        {
+            // comm = core.pm_commIO.get_node(commIO_str);
+            hh_loge("SensorIO: Using commIO_str [%s]", commIO_str.c_str());
+            comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
+            type = comm->get_type();
+        }else
+        {
+            hh_logn("SensorIO: Using VirtualIO");
+        }
+        
+
+        
 
         if (type == "CANProtocol")
         {
@@ -108,10 +118,10 @@ public:
             source.comm_type = CommIO_type::_SerialIO;
             configured = true;
         }
-        else if (commIO_str == "VirtualIO")
+        else if (commIO_str.compare("VirtualIO") == 0)
         {
             source.comm_type = CommIO_type::_VirtualIO;
-            source.ctype = "int32";
+            source.ctype = "double";
             configured = true;
         }
         else
@@ -125,6 +135,7 @@ public:
             return configured;
         }
 
+        
         if (source.comm_type != CommIO_type::_NO_TYPE)
         {
             switch (source.comm_type)
