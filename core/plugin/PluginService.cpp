@@ -132,14 +132,20 @@ bool PluginService::register_all_plugins_from_json(const json_obj &j)
         }
     }
 
-    if (!register_specific_plugins_from_json<CommIO_plugin>(j))
+    if (!register_specific_plugins_from_json<CommIO_plugin>(j)){
+        hh_loge("Error registering commIO plugins");
         return false;
+    }
 
-    if (!register_specific_plugins_from_json<DeviceIO_plugin>(j))
+    if (!register_specific_plugins_from_json<DeviceIO_plugin>(j)){
+        hh_loge("Error registering deviceIO plugins");
         return false;
+    }
 
-    if (!register_specific_plugins_from_json<ControlIO_plugin>(j))
+    if (!register_specific_plugins_from_json<ControlIO_plugin>(j)){
+        hh_loge("Error registering controlIO plugins");
         return false;
+    }
 
     return true;
 }
@@ -238,8 +244,10 @@ bool PluginService::add_nodes_from_json(const json_obj &j)
             if (!j_aux.get(key, &value))
                 continue;
 
-            if (!add_node_from_json<CommIO_plugin>(key, value))
+            if (!add_node_from_json<CommIO_plugin>(key, value)){
+                hh_loge("Error adding commIO node from json: %s", key.c_str());
                 return false;
+            }
         }
     }
 
@@ -251,8 +259,11 @@ bool PluginService::add_nodes_from_json(const json_obj &j)
             if (!j_aux.get(key, &value))
                 continue;
 
-            if (!add_node_from_json<DeviceIO_plugin>(key, value))
+            if (!add_node_from_json<DeviceIO_plugin>(key, value)){
+                hh_loge("Error adding deviceIO node from json: %s", key.c_str());
                 return false;
+            }
+                
         }
     }
 
@@ -264,8 +275,10 @@ bool PluginService::add_nodes_from_json(const json_obj &j)
             if (!j_aux.get(key, &value))
                 continue;
 
-            if (!add_node_from_json<ControlIO_plugin>(key, value))
+            if (!add_node_from_json<ControlIO_plugin>(key, value)){
+                hh_loge("Error adding controlIO node from json: %s", key.c_str());
                 return false;
+            }
         }
     }
 

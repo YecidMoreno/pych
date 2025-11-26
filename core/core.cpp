@@ -94,8 +94,10 @@ bool Core::load_json_project(std::string file_path)
         return false;
     }
 
-    if (!plugins.register_all_plugins_from_json(j_plugins))
+    if (!plugins.register_all_plugins_from_json(j_plugins)){
+        hh_loge("Error registering plugins");
         return false;
+    }
 
     json_obj j_log;
     if (j.get("log", &j_log))
@@ -106,8 +108,10 @@ bool Core::load_json_project(std::string file_path)
         fs::create_directories(_cfg.logger.path);
     }
 
-    if (!plugins.add_nodes_from_json(j))
+    if (!plugins.add_nodes_from_json(j)){
+        hh_loge("Error adding nodes from json");
         return false;
+    }
 
     hh_logn("Json file loaded with sucess");
     return true;

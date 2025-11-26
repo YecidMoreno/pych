@@ -90,11 +90,11 @@ public:
         if (!_cfg.get("source", &_source) || !_source.get("commIO", &commIO_str))
             return configured;
 
-        if (commIO_str != "VirtualIO"){
+        if (commIO_str != "VirtualIO")
+        {
             // comm = core.pm_commIO.get_node(commIO_str);
             comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
         }
-            
 
         const std::string &type = comm->get_type();
 
@@ -120,7 +120,10 @@ public:
         }
 
         if (!configured)
+        {
+            hh_loge("SensorIO: Error commIO_str [%s] no valid", commIO_str.c_str());
             return configured;
+        }
 
         if (source.comm_type != CommIO_type::_NO_TYPE)
         {
@@ -178,9 +181,21 @@ public:
         else
             return configured;
 
+        if (!configured)
+        {
+            hh_loge("SensorIO: Error source.comm_type no valid");
+            return configured;
+        }
+
         source._type = parse_var_type(source.ctype);
 
         configured = configured && get_eval_from_json(_cfg, "eval", eval);
+
+        if (!configured)
+        {
+            hh_loge("SensorIO: Error reading eval from json");
+            return configured;
+        }
 
         _source.get("reverse", &source.reverse);
         _source.get("calibrate", &source.calibrate);
@@ -195,7 +210,8 @@ public:
 
         auto &core = HH::Core::instance();
 
-        if (source.comm_type != CommIO_type::_VirtualIO){
+        if (source.comm_type != CommIO_type::_VirtualIO)
+        {
             comm = core.plugins.get_node<CommIO_plugin>(commIO_str);
             // comm = core.pm_commIO.get_node(commIO_str);
         }
