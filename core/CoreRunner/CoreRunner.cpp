@@ -45,6 +45,7 @@ bool CoreRunner::connect_all_devices()
     {
         for (auto &node : core.plugins.getNodes_T<DeviceIO_plugin>())
         {
+            std::this_thread::sleep_for(10ms);
             if (!node->command("calibrate"))
             {
                 

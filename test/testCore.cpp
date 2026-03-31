@@ -66,6 +66,7 @@ int main(int argc, char **argv)
 
     if (!core.load_json_project(file_path))
     {
+        hh_loge("Failed to load JSON project");
         finish();
         return -1;
     }
@@ -102,7 +103,7 @@ int main(int argc, char **argv)
 
     while (core.get_state() == HH::AppState::RUNNING)
     {
-        if (steady_clock::now() - t0 > 40s)
+        if (steady_clock::now() - t0 > (120s * 10))
         {
             break;
         }

@@ -88,6 +88,10 @@ public:
         initialized = false;
     }
 
+    double v(){
+        return y;
+    }
+
 private:
     double cutoff, _dt;
     double y;
