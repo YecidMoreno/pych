@@ -37,7 +37,6 @@ using namespace std::chrono_literals;
 
 using namespace jsonapi;
 
-pthread_t rx_thread;
 static std::atomic<bool> tx_running{false};
 
 struct map_frame
@@ -47,40 +46,7 @@ struct map_frame
     uint64_t r_count = 0;
 };
 
-pthread_mutex_t lock_all_frames;
-std::unordered_map<int32_t, map_frame> _all_frames;
-
-void print_can_message(struct can_frame &frame)
-{
-    hh_logi("CAN ID: 0x%X DLC: %d Data: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-            frame.can_id & CAN_EFF_MASK,
-            frame.can_dlc,
-            frame.data[0], frame.data[1], frame.data[2], frame.data[3],
-            frame.data[4], frame.data[5], frame.data[6], frame.data[7]);
-}
-static void *can_receive_thread(void *arg)
-{
-    int sock = *(int *)arg;
-    struct can_frame frame;
-
-    auto &core = HH::Core::instance();
-    while (core.get_state() == HH::AppState::RUNNING)
-    {
-        if (read(sock, &frame, sizeof(frame)) > 0)
-        {
-            uint32_t node_id_32 = frame.can_id & CAN_EFF_MASK;
-
-            if (true)
-            {
-                pthread_mutex_lock(&lock_all_frames);
-                _all_frames[node_id_32].frame = frame;
-                _all_frames[node_id_32].w_count++;
-                pthread_mutex_unlock(&lock_all_frames);
-            }
-        }
-    }
-    return nullptr;
-}
+static void *can_receive_thread(void *arg);
 
 class CANProtocol : public CommIO_plugin
 {
@@ -90,6 +56,15 @@ private:
     std::string iface;
 
 public:
+    pthread_t rx_thread;
+    pthread_mutex_t lock_all_frames;
+    std::unordered_map<int32_t, map_frame> _all_frames;
+
+    int get_sock()
+    {
+        return sock;
+    }
+
     bool config(const std::string &cfg) override
     {
         _cfg = json_obj::from_string(cfg);
@@ -115,6 +90,7 @@ public:
 
     bool connect(const std::string &) override
     {
+        hh_logn("%s connecting", iface.c_str());
         if (!configured)
             return false;
 
@@ -132,7 +108,7 @@ public:
             return false;
 
         tx_running = true;
-        pthread_create(&rx_thread, nullptr, can_receive_thread, &sock);
+        pthread_create(&rx_thread, nullptr, can_receive_thread, this);
 
         if (configured)
         {
@@ -267,6 +243,10 @@ public:
 
     CANProtocol()
     {
+        if (pthread_mutex_init(&lock_all_frames, nullptr) != 0)
+        {
+            hh_loge("Error crítico: No se pudo inicializar el mutex lock_all_frames");
+        }
     }
 
     ~CANProtocol()
@@ -281,5 +261,53 @@ public:
         return TO_STR(PLUGIN_IO_NAME);
     }
 };
+
+void print_can_message(struct can_frame &frame)
+{
+    hh_logi("CAN ID: 0x%X DLC: %d Data: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+            frame.can_id & CAN_EFF_MASK,
+            frame.can_dlc,
+            frame.data[0], frame.data[1], frame.data[2], frame.data[3],
+            frame.data[4], frame.data[5], frame.data[6], frame.data[7]);
+}
+
+static void *can_receive_thread(void *arg)
+{
+    auto &core = HH::Core::instance();
+    CANProtocol *ctx = static_cast<CANProtocol *>(arg);
+    if (!ctx)
+    {
+        hh_loge("Contexto CANProtocol nulo en el hilo de recepción.");
+        return nullptr;
+    }
+
+    int sock = ctx->get_sock();
+    // int sock = *(int *)arg;
+    struct can_frame frame;
+
+    while (core.get_state() == HH::AppState::RUNNING)
+    {
+        ssize_t nbytes = read(sock, &frame, sizeof(frame));
+
+        if (nbytes <= 0)
+        {
+            break;
+        }
+
+        if (nbytes > 0)
+        {
+            uint32_t node_id_32 = frame.can_id & CAN_EFF_MASK;
+
+            if (true)
+            {
+                pthread_mutex_lock(&ctx->lock_all_frames);
+                ctx->_all_frames[node_id_32].frame = frame;
+                ctx->_all_frames[node_id_32].w_count++;
+                pthread_mutex_unlock(&ctx->lock_all_frames);
+            }
+        }
+    }
+    return nullptr;
+}
 
 __FINISH_PLUGIN_IO;

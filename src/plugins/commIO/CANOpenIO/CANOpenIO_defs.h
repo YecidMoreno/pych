@@ -15,6 +15,8 @@
 #define B3_PAYLOAD 0x00
 #define B4_PAYLOAD 0x22
 
+class CANProtocol;
+
 typedef struct
 {
     uint32_t CAN_ID = 0;

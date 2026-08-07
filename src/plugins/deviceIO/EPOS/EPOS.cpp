@@ -109,7 +109,13 @@ public:
 
     virtual void disconnect() override
     {
+        comm->send(nullptr, 0, &canopen_cmd_SYNC);
+        std::this_thread::sleep_for(10ms);
+
         this->command(EPOS_CMD::FAULT_RESET);
+
+        comm->send(nullptr, 0, &canopen_cmd_SYNC);
+        std::this_thread::sleep_for(10ms);
     }
 
     virtual ssize_t write(void *data, size_t size, const void *arg1 = nullptr) override
